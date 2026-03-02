@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import PageMeta from "../../../shared/components/common/PageMeta";
 import PageBreadcrumb from "../../../shared/components/common/PageBreadCrumb";
-import { CreateDemandButton, DemandEmptyState, CreateFakeDemandButton } from "../components";
+import { CreateDemandButton, DemandEmptyState, CreateFakeDemandButton, DeleteAllDemandsButton } from "../components";
 import { DemandSearch } from "../components/DemandSearch";
 import { KanbanBoard } from "../components/kanban/KanbanBoard";
 import { useAppStore } from "../../../shared/store/appStore";
@@ -23,6 +23,7 @@ export const DemandKanban: React.FC = () => {
       <PageBreadcrumb pageTitle="Quadro de Demandas" />
 
       <div className="mb-5 flex items-center justify-end gap-2 lg:mb-7">
+        <DeleteAllDemandsButton />
         <CreateFakeDemandButton />
         <CreateDemandButton />
       </div>

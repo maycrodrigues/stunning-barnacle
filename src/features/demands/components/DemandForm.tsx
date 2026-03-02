@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Input from "../../../shared/components/form/input/InputField";
@@ -8,6 +8,7 @@ import Button from "../../../shared/components/ui/button/Button";
 import { LocationPicker } from "./LocationPicker";
 import { demandSchema, DemandFormData } from "../types";
 import { useAppStore } from "../../../shared/store/appStore";
+import { useMemberStore } from "../../members/store/memberStore";
 
 interface DemandFormProps {
   initialValues?: Partial<DemandFormData>;
@@ -27,6 +28,21 @@ export const DemandForm: React.FC<DemandFormProps> = ({
   submitLabel = "Salvar",
 }) => {
   const { categoryOptions, urgencyOptions, statusOptions } = useAppStore();
+  const { members, loadMembers } = useMemberStore();
+
+  useEffect(() => {
+    loadMembers();
+  }, []);
+
+  const responsibleOptions = React.useMemo(() => {
+    return [
+      { value: "", label: "Sem responsável definido" },
+      ...members.map((member) => ({
+        value: member.id,
+        label: member.name,
+      })),
+    ];
+  }, [members]);
 
   const {
     control,
@@ -42,6 +58,7 @@ export const DemandForm: React.FC<DemandFormProps> = ({
       location: undefined,
       requesterName: "",
       requesterContact: "",
+      responsibleId: "",
       ...initialValues,
     },
   });
@@ -132,6 +149,22 @@ export const DemandForm: React.FC<DemandFormProps> = ({
                           {errors.urgency.message}
                         </p>
                       )}
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="responsibleId"
+                  control={control}
+                  render={({ field }) => (
+                    <div>
+                      <Select
+                        options={responsibleOptions}
+                        placeholder="Responsável (Opcional)"
+                        onChange={field.onChange}
+                        defaultValue={field.value}
+                        className="bg-white dark:bg-gray-800"
+                      />
                     </div>
                   )}
                 />

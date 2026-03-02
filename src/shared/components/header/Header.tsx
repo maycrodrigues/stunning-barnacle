@@ -113,7 +113,7 @@ const Header: React.FC<HeaderProps> = ({ onClick, onToggle }) => {
             </svg>
           </button>
 
-          <div className="hidden flex-1 max-w-xl mx-auto px-6 lg:block">
+          <div className="hidden flex-1 max-w-xl mx-auto lg:block">
             <DemandSearch className="mb-0" />
           </div>
         </div>

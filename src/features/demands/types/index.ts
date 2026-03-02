@@ -15,7 +15,8 @@ export const demandSchema = z.object({
   requesterName: z.string().min(3, "Nome do solicitante é obrigatório"),
   requesterContact: z.string().min(5, "Contato é obrigatório (email ou telefone)"),
   status: z.string().optional(),
-  deadline: z.coerce.date().optional(),
+  deadline: z.date().optional(),
+  responsibleId: z.string().optional(),
 });
 
 export type DemandFormData = z.infer<typeof demandSchema>;

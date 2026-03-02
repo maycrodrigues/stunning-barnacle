@@ -1,12 +1,33 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { TimelineEvent } from '../../../shared/services/db';
+import { useMemberStore } from '../../members/store/memberStore';
+import { useAppStore } from '../../../shared/store/appStore';
 
 interface DemandTimelineProps {
   timeline?: TimelineEvent[];
 }
 
 export const DemandTimeline: React.FC<DemandTimelineProps> = ({ timeline = [] }) => {
+  const { members, loadMembers } = useMemberStore();
+  const { statusOptions } = useAppStore();
+
+  useEffect(() => {
+    loadMembers();
+  }, []);
+
+  const getMemberName = (id: any) => {
+    if (!id || typeof id !== 'string') return 'Não atribuído';
+    const member = members.find(m => m.id === id);
+    return member ? member.name : 'Usuário desconhecido';
+  };
+
+  const getStatusLabel = (slug: any) => {
+    if (!slug || typeof slug !== 'string') return slug;
+    const option = statusOptions.find(o => o.value === slug);
+    return option ? option.label : slug;
+  };
+
   const sortedEvents = [...timeline].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   if (sortedEvents.length === 0) {
@@ -22,8 +43,8 @@ export const DemandTimeline: React.FC<DemandTimelineProps> = ({ timeline = [] })
     }).format(new Date(date));
   };
 
-  const getIcon = (type: string) => {
-    switch (type) {
+  const getIcon = (event: TimelineEvent) => {
+    switch (event.type) {
       case 'created':
         return (
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 ring-8 ring-white dark:bg-blue-900 dark:ring-gray-900">
@@ -45,6 +66,47 @@ export const DemandTimeline: React.FC<DemandTimelineProps> = ({ timeline = [] })
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 ring-8 ring-white dark:bg-green-900 dark:ring-gray-900">
             <svg className="h-5 w-5 text-green-600 dark:text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </span>
+        );
+      case 'tratativa':
+        const action = event.metadata?.action;
+        
+        if (action === 'removed') {
+            return (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 ring-8 ring-white dark:bg-red-900 dark:ring-gray-900">
+                    <svg className="h-5 w-5 text-red-600 dark:text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </span>
+            );
+        }
+        
+        if (action === 'completed') {
+             return (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 ring-8 ring-white dark:bg-green-900 dark:ring-gray-900">
+                    <svg className="h-5 w-5 text-green-600 dark:text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                </span>
+            );
+        }
+        
+        if (action === 'reopened') {
+             return (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 ring-8 ring-white dark:bg-yellow-900 dark:ring-gray-900">
+                    <svg className="h-5 w-5 text-yellow-600 dark:text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </span>
+            );
+        }
+
+        // Default (added)
+        return (
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 ring-8 ring-white dark:bg-indigo-900 dark:ring-gray-900">
+            <svg className="h-5 w-5 text-indigo-600 dark:text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </span>
         );
@@ -72,7 +134,7 @@ export const DemandTimeline: React.FC<DemandTimelineProps> = ({ timeline = [] })
               ) : null}
               <div className="relative flex space-x-3">
                 <div>
-                  {getIcon(event.type)}
+                  {getIcon(event)}
                 </div>
                 <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
                   <div>
@@ -80,16 +142,19 @@ export const DemandTimeline: React.FC<DemandTimelineProps> = ({ timeline = [] })
                       <span className="font-medium text-gray-900 dark:text-white">{event.title}</span>
                       {event.user && <span className="text-xs ml-2 text-gray-400">por {event.user}</span>}
                     </p>
-                     {event.description && (
-                        <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-300">
-                            {event.description}
-                        </p>
-                     )}
-                     
-                     {event.metadata && event.metadata.justification && (
-                        <div className="mt-2 text-sm italic text-gray-500 bg-gray-50 dark:bg-gray-800 p-2 rounded border-l-4 border-gray-300 dark:border-gray-600">
-                            Justificativa: "{event.metadata.justification}"
+                     {event.type === 'tratativa' ? (
+                        <div className={`mt-3 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 p-2 ${event.metadata?.action === 'removed' ? 'opacity-75 bg-gray-50 dark:bg-gray-800/50 border-l-4 border-red-200 dark:border-red-900' : ''}`}>
+                            {event.metadata?.tratativaTitle && (
+                                <p className={`font-bold text-gray-900 dark:text-white mb-2 ${event.metadata?.action === 'removed' ? 'line-through text-gray-500 dark:text-gray-500' : ''}`}>{event.metadata.tratativaTitle}</p>
+                            )}
+                            <p className="whitespace-pre-wrap leading-relaxed">{event.description}</p>
                         </div>
+                     ) : (
+                        event.metadata && event.metadata.justification && (
+                            <div className="mt-2 text-sm italic text-gray-500 bg-gray-50 dark:bg-gray-800 p-2 rounded border-l-4 border-gray-300 dark:border-gray-600">
+                              {event.metadata.justification}
+                            </div>
+                        )
                      )}
 
                      {event.metadata && event.metadata.attachment && (
@@ -133,14 +198,37 @@ export const DemandTimeline: React.FC<DemandTimelineProps> = ({ timeline = [] })
                         </div>
                      )}
                      
-                     {/* 
-                     {event.metadata && (
-                         <div className="mt-2 text-xs text-gray-500 font-mono bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                            {event.metadata.from !== undefined && <div>De: {String(event.metadata.from)}</div>}
-                            {event.metadata.to !== undefined && <div>Para: {String(event.metadata.to)}</div>}
+                     {/* Changes Display */}
+                     {event.metadata && (event.title === 'Responsável atualizado' || event.title === 'Status atualizado') && (
+                         <div className="mt-2 text-xs text-gray-500 bg-gray-50 dark:bg-gray-800 p-2 rounded flex flex-col gap-1 border border-gray-100 dark:border-gray-700">
+                            <div className="flex gap-1">
+                                <span className="font-medium">De:</span> 
+                                <span>
+                                    {event.title === 'Responsável atualizado' 
+                                        ? getMemberName(event.metadata.from) 
+                                        : getStatusLabel(event.metadata.from)}
+                                </span>
+                            </div>
+                            <div className="flex gap-1">
+                                <span className="font-medium">Para:</span> 
+                                <span className="font-bold text-gray-700 dark:text-gray-300">
+                                    {event.title === 'Responsável atualizado' 
+                                        ? getMemberName(event.metadata.to) 
+                                        : getStatusLabel(event.metadata.to)}
+                                </span>
+                            </div>
+                            
+                            {/* Show responsible in status change if present */}
+                            {event.title === 'Status atualizado' && event.metadata.responsibleId && (
+                                <div className="flex gap-1 mt-1 pt-1 border-t border-gray-200 dark:border-gray-600">
+                                    <span className="font-medium">Responsável:</span>
+                                    <span className="text-gray-700 dark:text-gray-300">
+                                        {getMemberName(event.metadata.responsibleId)}
+                                    </span>
+                                </div>
+                            )}
                          </div>
                      )}
-                     */}
                   </div>
                   <div className="whitespace-nowrap text-right text-sm text-gray-500 dark:text-gray-400">
                     <time dateTime={event.date.toString()}>

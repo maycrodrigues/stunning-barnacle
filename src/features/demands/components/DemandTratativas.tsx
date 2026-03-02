@@ -85,7 +85,7 @@ export const DemandTratativas: React.FC<DemandTratativasProps> = ({
           confirmButtonColor: "#3B82F6",
         });
 
-        statusUpdate = { status: "em-andamento" };
+        statusUpdate = { status: "acoes-do-gabinete" };
         justification = "Essa demanda voltou pois contém Tratativas em aberto";
         
         await updateDemand(demand.id, {

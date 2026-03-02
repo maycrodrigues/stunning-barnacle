@@ -10,6 +10,7 @@ import {
 } from "../../../shared/components/ui/table";
 import Badge from "../../../shared/components/ui/badge/Badge";
 import { Demand, useAppStore } from "../../../shared/store/appStore";
+import { useMemberStore } from "../../members/store/memberStore";
 import { DeadlineModal } from "./DeadlineModal";
 import { Eye, Edit2, Trash2, Clock, Calendar } from "lucide-react";
 
@@ -19,12 +20,17 @@ interface DemandTableProps {
 
 export const DemandTable: React.FC<DemandTableProps> = ({ demands }) => {
   const { categoryOptions, urgencyOptions, statusOptions, removeDemand, updateDemand } = useAppStore();
+  const { members, loadMembers } = useMemberStore();
   const navigate = useNavigate();
 
   const [isDeadlineModalOpen, setIsDeadlineModalOpen] = useState(false);
   const [selectedDemandId, setSelectedDemandId] = useState<string | null>(null);
   const [selectedDemandDate, setSelectedDemandDate] = useState<Date | undefined>(undefined);
   const [isSavingDeadline, setIsSavingDeadline] = useState(false);
+
+  React.useEffect(() => {
+    loadMembers();
+  }, []);
 
   const handleOpenDeadlineModal = (demand: Demand) => {
     setSelectedDemandId(demand.id);
@@ -222,6 +228,12 @@ export const DemandTable: React.FC<DemandTableProps> = ({ demands }) => {
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
+                Responsável
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
                 Status
               </TableCell>
               <TableCell
@@ -258,7 +270,7 @@ export const DemandTable: React.FC<DemandTableProps> = ({ demands }) => {
               return (
                 <React.Fragment key={statusOption.value}>
                   <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 dark:bg-white/[0.02] dark:hover:bg-white/[0.02]">
-                    <TableCell colSpan={9} className="px-5 py-3">
+                    <TableCell colSpan={10} className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-gray-700 dark:text-gray-200">
                           {statusOption.label}
@@ -302,6 +314,16 @@ export const DemandTable: React.FC<DemandTableProps> = ({ demands }) => {
                         </Badge>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start">
+                        {(() => {
+                           const member = members.find(m => m.id === demand.responsibleId);
+                           return member ? (
+                             <span className="text-theme-sm text-gray-700 dark:text-gray-300">{member.name}</span>
+                           ) : (
+                             <span className="text-theme-sm text-gray-400 italic">Não atribuído</span>
+                           );
+                        })()}
+                      </TableCell>
+                      <TableCell className="px-5 py-4 text-start">
                         <div className="flex flex-col items-start gap-1">
                           <Badge
                             size="sm"
@@ -337,8 +359,8 @@ export const DemandTable: React.FC<DemandTableProps> = ({ demands }) => {
                       </TableCell>
                       <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                         {demand.deadline ? (
-                          <div className={`flex items-center gap-1.5 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
-                            <Calendar size={14} className={isOverdue ? 'text-red-500' : 'text-gray-400'} />
+                          <div className={`flex items-center gap-1.5 ${isOverdue ? 'text-red-600 font-medium' : 'text-green-600 font-medium'}`}>
+                            <Calendar size={14} className={isOverdue ? 'text-red-500' : 'text-green-500'} />
                             <span>{formatDate(demand.deadline)}</span>
                           </div>
                         ) : (

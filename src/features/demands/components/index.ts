@@ -2,6 +2,7 @@ export * from "./DemandForm";
 export * from "./LocationPicker";
 export * from "./CreateDemandButton";
 export * from "./CreateFakeDemandButton";
+export * from "./DeleteAllDemandsButton";
 export * from "./CreateFakeTratativaButton";
 export * from "./DemandEmptyState";
 export * from "./DemandTable";

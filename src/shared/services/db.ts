@@ -16,9 +16,10 @@ export interface StatusHistoryEntry {
   startDate: Date;
   endDate?: Date;
   duration?: number; // in milliseconds
+  responsibleId?: string;
 }
 
-export type TimelineEventType = 'created' | 'updated' | 'status_change' | 'comment' | 'attachment';
+export type TimelineEventType = 'created' | 'updated' | 'status_change' | 'comment' | 'attachment' | 'tratativa';
 
 export interface TimelineEvent {
   id: string;
@@ -153,7 +154,8 @@ export const getDB = () => {
 
 // Demand operations
 export const saveDemand = async (
-  demand: DemandFormData
+  demand: DemandFormData,
+  actorName: string = 'Sistema'
 ): Promise<DemandFormData & { id: string; createdAt: Date; protocol: string; active: boolean; status: string; statusHistory: StatusHistoryEntry[]; totalDuration?: number; timeline: TimelineEvent[] }> => {
   const db = await getDB();
   const id = ulid();
@@ -214,6 +216,7 @@ export const saveDemand = async (
     statusHistory: [{
       status: initialStatus,
       startDate: new Date(),
+      responsibleId: demand.responsibleId
     }],
     totalDuration: 0,
     timeline: [{
@@ -222,7 +225,7 @@ export const saveDemand = async (
       date: new Date(),
       title: 'Demanda criada',
       description: 'Demanda registrada no sistema',
-      user: 'Sistema'
+      user: actorName
     }]
   };
   await db.put("demands", newDemand);
@@ -267,6 +270,11 @@ export const deleteDemand = async (id: string) => {
     const deletedDemand = { ...existingDemand, active: false };
     await db.put("demands", deletedDemand);
   }
+};
+
+export const deleteAllDemands = async () => {
+  const db = await getDB();
+  await db.clear("demands");
 };
 
 // Settings operations

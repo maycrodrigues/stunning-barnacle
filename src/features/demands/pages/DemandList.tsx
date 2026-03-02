@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import PageBreadcrumb from "../../../shared/components/common/PageBreadCrumb";
 import PageMeta from "../../../shared/components/common/PageMeta";
 import { Loader } from "../../../shared/components/ui/loader";
-import { CreateDemandButton, DemandEmptyState, DemandGroupedList, CreateFakeDemandButton } from "../components";
+import { CreateDemandButton, DemandEmptyState, DemandGroupedList, CreateFakeDemandButton, DeleteAllDemandsButton } from "../components";
 import { DemandSearch } from "../components/DemandSearch";
 import { useAppStore } from "../../../shared/store/appStore";
 
@@ -32,6 +32,7 @@ export const DemandList: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+        <DeleteAllDemandsButton />
         <CreateFakeDemandButton />
         <CreateDemandButton />
       </div>

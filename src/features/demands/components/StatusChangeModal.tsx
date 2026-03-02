@@ -1,13 +1,19 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { X, Upload, FileText, Image as ImageIcon, Trash2, ArrowRight, AlertCircle } from 'lucide-react';
-import Badge from '../../../shared/components/ui/badge/Badge';
+import Select from '../../../shared/components/form/Select';
+import { useMemberStore } from '../../members/store/memberStore';
 
 interface StatusChangeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (justification: string, attachment?: { type: 'image' | 'pdf', url: string, name: string } | null) => void;
+  onConfirm: (justification: string, attachment?: { type: 'image' | 'pdf', url: string, name: string } | null, responsibleId?: string) => void;
   oldStatusLabel: string;
   newStatusLabel: string;
+  newStatusValue?: string;
+  initialResponsibleId?: string;
+  enableResponsibleSelection?: boolean;
+  mode?: 'status-change' | 'responsible-change';
+  isLoading?: boolean;
 }
 
 export const StatusChangeModal: React.FC<StatusChangeModalProps> = ({
@@ -16,22 +22,37 @@ export const StatusChangeModal: React.FC<StatusChangeModalProps> = ({
   onConfirm,
   oldStatusLabel,
   newStatusLabel,
+  newStatusValue,
+  initialResponsibleId,
+  enableResponsibleSelection = false,
+  mode = 'status-change',
+  isLoading = false,
 }) => {
+  const { members, loadMembers } = useMemberStore();
   const [justification, setJustification] = useState('');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [responsibleId, setResponsibleId] = useState('');
   const [error, setError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load members if needed
+  useEffect(() => {
+    if (isOpen && (newStatusValue === 'acoes-do-gabinete' || enableResponsibleSelection || mode === 'responsible-change')) {
+      loadMembers();
+    }
+  }, [isOpen, newStatusValue, enableResponsibleSelection, mode]);
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
       setJustification('');
       setAttachmentFile(null);
+      setResponsibleId(initialResponsibleId || '');
       setError('');
       setIsDragging(false);
     }
-  }, [isOpen]);
+  }, [isOpen, initialResponsibleId]);
 
   // Close on Escape key
   useEffect(() => {
@@ -105,6 +126,29 @@ export const StatusChangeModal: React.FC<StatusChangeModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (mode === 'responsible-change') {
+      if (!responsibleId) {
+        setError('Selecione um responsável.');
+        return;
+      }
+      const member = members.find(m => m.id === responsibleId);
+      const memberName = member ? member.name : 'Desconhecido';
+      onConfirm(`Responsável alterado para ${memberName}`, null, responsibleId);
+      return;
+    }
+    
+    // Validate responsible selection if mandatory
+    // For 'acoes-do-gabinete', it's mandatory.
+    // For other statuses, we might want to allow it to be optional or cleared.
+    // If we enable responsible selection explicitly, we might want to enforce it?
+    // Let's keep it mandatory only for 'acoes-do-gabinete' for now to avoid breaking changes,
+    // but allow selection if enabled.
+    if (newStatusValue === 'acoes-do-gabinete' && !responsibleId) {
+      setError('Selecione um responsável para esta demanda.');
+      return;
+    }
+
     if (!justification.trim()) {
       setError('A justificativa é obrigatória para alterar o status.');
       return;
@@ -133,7 +177,7 @@ export const StatusChangeModal: React.FC<StatusChangeModalProps> = ({
       }
     }
 
-    onConfirm(justification, attachmentData);
+    onConfirm(justification, attachmentData, responsibleId || undefined);
   };
 
   if (!isOpen) return null;
@@ -153,7 +197,7 @@ export const StatusChangeModal: React.FC<StatusChangeModalProps> = ({
           <div className="border-b border-gray-100 bg-gray-50/50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold leading-6 text-gray-900 dark:text-white">
-                Confirmar Alteração
+                {mode === 'responsible-change' ? 'Alterar Responsável' : 'Confirmar Alteração'}
               </h3>
               <button
                 onClick={onClose}
@@ -166,102 +210,125 @@ export const StatusChangeModal: React.FC<StatusChangeModalProps> = ({
 
           <div className="px-6 py-6">
             {/* Status Flow Visualization */}
-            <div className="mb-6 flex items-center justify-center gap-3 rounded-lg bg-gray-50 p-4 dark:bg-gray-700/30 border border-dashed border-gray-200 dark:border-gray-600">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{oldStatusLabel}</span>
-              <ArrowRight className="h-4 w-4 text-gray-400" />
-              <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{newStatusLabel}</span>
-            </div>
+            {mode === 'status-change' && (
+              <div className="mb-6 flex items-center justify-center gap-3 rounded-lg bg-gray-50 p-4 dark:bg-gray-700/30 border border-dashed border-gray-200 dark:border-gray-600">
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{oldStatusLabel}</span>
+                <ArrowRight className="h-4 w-4 text-gray-400" />
+                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{newStatusLabel}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit}>
-              {/* Justification Field */}
-              <div className="mb-5">
-                <label htmlFor="justification" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Justificativa <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="justification"
-                  rows={4}
-                  className={`w-full rounded-lg border p-3 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white resize-none ${
-                    error && !justification.trim()
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-200 dark:border-red-500/50 dark:focus:ring-red-900/30'
-                      : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100 dark:border-gray-600 dark:focus:border-blue-500 dark:focus:ring-blue-900/30'
-                  }`}
-                  placeholder="Descreva o motivo desta alteração..."
-                  value={justification}
-                  onChange={(e) => {
-                      setJustification(e.target.value);
+              {/* Responsible Field */}
+              {(newStatusValue === 'acoes-do-gabinete' || enableResponsibleSelection || mode === 'responsible-change') && (
+                <div className="mb-5">
+                  <Select
+                    label={`Responsável${(newStatusValue === 'acoes-do-gabinete' || mode === 'responsible-change') ? ' *' : ''}`}
+                    options={members.map(member => ({ value: member.id, label: member.name }))}
+                    value={responsibleId}
+                    onChange={(value) => {
+                      setResponsibleId(value);
                       if (error) setError('');
-                  }}
-                  autoFocus
-                />
-              </div>
+                    }}
+                    placeholder="Selecione um responsável"
+                    className="w-full"
+                  />
+                </div>
+              )}
 
-              {/* Attachment Field */}
-              <div className="mb-6">
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Anexo (Opcional)
-                </label>
-                
-                {!attachmentFile ? (
-                  <div 
-                    className={`relative flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-all ${
-                      isDragging 
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-700/50'
-                    }`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <div className="mb-2 rounded-full bg-gray-100 p-2 dark:bg-gray-700">
-                      <Upload className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                    </div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Clique para enviar ou arraste
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      PDF ou Imagem (max. 5MB)
-                    </p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      id="attachment"
-                      accept="image/*,.pdf"
-                      className="hidden"
-                      onChange={handleFileChange}
+              {/* Justification Field */}
+              {mode === 'status-change' && (
+                <>
+                  <div className="mb-5">
+                    <label htmlFor="justification" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Justificativa <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      id="justification"
+                      rows={4}
+                      className={`w-full rounded-lg border p-3 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white resize-none ${
+                        error && !justification.trim()
+                          ? 'border-red-300 focus:border-red-500 focus:ring-red-200 dark:border-red-500/50 dark:focus:ring-red-900/30'
+                          : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100 dark:border-gray-600 dark:focus:border-blue-500 dark:focus:ring-blue-900/30'
+                      }`}
+                      placeholder="Descreva o motivo desta alteração..."
+                      value={justification}
+                      onChange={(e) => {
+                          setJustification(e.target.value);
+                          if (error) setError('');
+                      }}
+                      autoFocus
                     />
                   </div>
-                ) : (
-                  <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-700/50">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white shadow-sm dark:bg-gray-600">
-                        {attachmentFile.type.startsWith('image/') ? (
-                           <ImageIcon className="h-5 w-5 text-blue-500" />
-                        ) : (
-                           <FileText className="h-5 w-5 text-red-500" />
-                        )}
+
+                  {/* Attachment Field */}
+                  <div className="mb-6">
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Anexo (Opcional)
+                    </label>
+                    
+                    {!attachmentFile ? (
+                      <div 
+                        className={`relative flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-all ${
+                          isDragging 
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                            : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-700/50'
+                        }`}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <div className="mb-2 rounded-full bg-gray-100 p-2 dark:bg-gray-700">
+                          <Upload className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Clique para enviar ou arraste
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          PDF ou Imagem (max. 5MB)
+                        </p>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          id="attachment"
+                          accept="image/*,.pdf"
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
                       </div>
-                      <div className="flex flex-col overflow-hidden">
-                        <span className="truncate text-sm font-medium text-gray-700 dark:text-gray-200">
-                          {attachmentFile.name}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {(attachmentFile.size / 1024 / 1024).toFixed(2)} MB
-                        </span>
+                    ) : (
+                      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-700/50">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white shadow-sm dark:bg-gray-600">
+                            {attachmentFile.type.startsWith('image/') ? (
+                              <ImageIcon className="h-5 w-5 text-blue-500" />
+                            ) : (
+                              <FileText className="h-5 w-5 text-red-500" />
+                            )}
+                          </div>
+                          <div className="flex flex-col overflow-hidden">
+                            <span className="truncate text-sm font-medium text-gray-700 dark:text-gray-200">
+                              {attachmentFile.name}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {(attachmentFile.size / 1024 / 1024).toFixed(2)} MB
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={removeFile}
+                          className="rounded-md p-1.5 text-gray-400 hover:bg-white hover:text-red-500 hover:shadow-sm dark:hover:bg-gray-600 transition-all"
+                          title="Remover arquivo"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={removeFile}
-                      className="rounded-md p-1.5 text-gray-400 hover:bg-white hover:text-red-500 hover:shadow-sm dark:hover:bg-gray-600 transition-all"
-                      title="Remover arquivo"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
 
               {/* Error Message */}
               {error && (
@@ -275,16 +342,18 @@ export const StatusChangeModal: React.FC<StatusChangeModalProps> = ({
               <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  className="inline-flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 sm:w-auto"
+                  className="inline-flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={onClose}
+                  disabled={isLoading}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 sm:w-auto"
+                  className="inline-flex w-full justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
                 >
-                  Confirmar Alteração
+                  {isLoading ? 'Salvando...' : (mode === 'responsible-change' ? 'Salvar Responsável' : 'Confirmar Alteração')}
                 </button>
               </div>
             </form>

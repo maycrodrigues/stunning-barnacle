@@ -27,6 +27,7 @@ import Swal from "sweetalert2";
 import { Eye, Edit2, Trash2, Clock, ChevronDown, ChevronRight, User, Calendar, GripVertical, MessageSquare, ListTodo } from "lucide-react";
 
 import { Demand, useAppStore, Option } from "../../../shared/store/appStore";
+import { useMemberStore } from "../../members/store/memberStore";
 import Badge from "../../../shared/components/ui/badge/Badge";
 import { StatusChangeModal } from "./StatusChangeModal";
 import { CompletionTypeModal } from "./CompletionTypeModal";
@@ -46,6 +47,9 @@ interface DemandListItemProps {
 const DemandListItem = ({ demand, isOverlay, categoryOptions, urgencyOptions }: DemandListItemProps) => {
   const navigate = useNavigate();
   const { removeDemand } = useAppStore();
+  const { members } = useMemberStore();
+
+  const responsibleMember = demand.responsibleId ? members.find(m => m.id === demand.responsibleId) : null;
   
   const [showTratativas, setShowTratativas] = useState(false);
   const openTratativasCount = demand.tratativas?.filter(t => !t.completed).length || 0;
@@ -191,6 +195,14 @@ const DemandListItem = ({ demand, isOverlay, categoryOptions, urgencyOptions }: 
 
       {/* Right Section: Metadata & Actions */}
       <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+
+        {/* Responsible Member */}
+        {responsibleMember && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400" title={`Responsável: ${responsibleMember.name}`}>
+            <User size={14} className="text-gray-400" />
+            <span className="hidden md:inline max-w-[100px] truncate">{responsibleMember.name}</span>
+          </div>
+        )}
 
         {/* Date */}
         {demand.deadline && (
@@ -378,7 +390,12 @@ interface DemandGroupedListProps {
 export const DemandGroupedList: React.FC<DemandGroupedListProps> = ({ demands }) => {
   const navigate = useNavigate();
   const { statusOptions, categoryOptions, urgencyOptions, updateDemand } = useAppStore();
+  const { loadMembers } = useMemberStore();
   
+  React.useEffect(() => {
+    loadMembers();
+  }, []);
+
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [pendingChange, setPendingChange] = useState<{ id: string; newStatus: string; oldStatus: string } | null>(null);
@@ -495,9 +512,9 @@ export const DemandGroupedList: React.FC<DemandGroupedListProps> = ({ demands })
     setActiveId(null);
   };
 
-  const handleConfirmStatusChange = async (justification: string, attachment?: { type: 'image' | 'pdf', url: string, name: string } | null) => {
+  const handleConfirmStatusChange = async (justification: string, attachment?: { type: 'image' | 'pdf', url: string, name: string } | null, responsibleId?: string) => {
     if (pendingChange) {
-      await updateDemand(pendingChange.id, { status: pendingChange.newStatus }, justification, attachment || undefined);
+      await updateDemand(pendingChange.id, { status: pendingChange.newStatus, responsibleId }, justification, attachment || undefined);
       setPendingChange(null);
       setIsStatusModalOpen(false);
     }
@@ -585,6 +602,9 @@ export const DemandGroupedList: React.FC<DemandGroupedListProps> = ({ demands })
         onConfirm={handleConfirmStatusChange}
         oldStatusLabel={statusOptions.find(s => s.value === pendingChange?.oldStatus)?.label || pendingChange?.oldStatus || ''}
         newStatusLabel={statusOptions.find(s => s.value === pendingChange?.newStatus)?.label || pendingChange?.newStatus || ''}
+        newStatusValue={pendingChange?.newStatus}
+        initialResponsibleId={pendingChange ? demands.find(d => d.id === pendingChange.id)?.responsibleId : undefined}
+        enableResponsibleSelection={true}
       />
 
       <CompletionTypeModal

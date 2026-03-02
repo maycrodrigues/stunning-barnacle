@@ -73,13 +73,13 @@ export const CreateFakeTratativaButton: React.FC<CreateFakeTratativaButtonProps>
       if (!newTratativa.completed && restrictedStatus.includes(demand.status)) {
         await Swal.fire({
           title: "Alteração de Status (Fake)",
-          text: "A demanda voltará para o status 'Em Andamento', pois a tratativa fake gerada está em aberto.",
+          text: " 'Em Andamento', pois a tratativa fake gerada está em aberto.",
           icon: "info",
           confirmButtonText: "Confirmar",
           confirmButtonColor: "#3B82F6",
         });
 
-        statusUpdate = { status: "em-andamento" };
+        statusUpdate = { status: "acoes-do-gabinete" };
         justification = "Essa demanda voltou pois contém Tratativas em aberto";
 
         await updateDemand(demand.id, {

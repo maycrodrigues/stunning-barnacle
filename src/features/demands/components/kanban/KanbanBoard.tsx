@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates, arrayMove } from "@dnd-kit/sortable";
 import { Demand, Option, useAppStore } from "../../../../shared/store/appStore";
+import { useMemberStore } from "../../../members/store/memberStore";
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanItem, KanbanCard } from "./KanbanItem";
 import { createPortal } from "react-dom";
@@ -32,8 +33,13 @@ interface KanbanBoardProps {
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ demands, statusOptions }) => {
   const { updateDemand } = useAppStore();
+  const { loadMembers } = useMemberStore();
   const navigate = useNavigate();
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadMembers();
+  }, []);
   const [activeOverId, setActiveOverId] = useState<string | null>(null);
   
   // Ref to keep demands up to date in drag callbacks
@@ -238,9 +244,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ demands, statusOptions
     setActiveId(null);
   };
 
-  const handleConfirmStatusChange = async (justification: string, attachment?: { type: 'image' | 'pdf', url: string, name: string } | null) => {
+  const handleConfirmStatusChange = async (justification: string, attachment?: { type: 'image' | 'pdf', url: string, name: string } | null, responsibleId?: string) => {
     if (pendingChange) {
-      await updateDemand(pendingChange.id, { status: pendingChange.newStatus }, justification, attachment || undefined);
+      await updateDemand(pendingChange.id, { status: pendingChange.newStatus, responsibleId }, justification, attachment || undefined);
       setPendingChange(null);
       setIsStatusModalOpen(false);
     }
@@ -337,6 +343,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ demands, statusOptions
         onConfirm={handleConfirmStatusChange}
         oldStatusLabel={statusOptions.find(s => s.value === pendingChange?.oldStatus)?.label || pendingChange?.oldStatus || ''}
         newStatusLabel={statusOptions.find(s => s.value === pendingChange?.newStatus)?.label || pendingChange?.newStatus || ''}
+        newStatusValue={pendingChange?.newStatus}
+        initialResponsibleId={pendingChange ? demands.find(d => d.id === pendingChange.id)?.responsibleId : undefined}
+        enableResponsibleSelection={true}
       />
 
       <CompletionTypeModal

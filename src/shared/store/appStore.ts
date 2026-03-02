@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { ulid } from "ulid";
 import { DemandFormData } from "../../features/demands/types";
-import { saveDemand, getAllDemands, saveSettings, getSettings, updateDemand, deleteDemand, StatusHistoryEntry, TimelineEvent, Tratativa, DemandTratativa } from "../services/db";
+import { saveDemand, getAllDemands, saveSettings, getSettings, updateDemand, deleteDemand, deleteAllDemands, StatusHistoryEntry, TimelineEvent, Tratativa, DemandTratativa } from "../services/db";
 import { generateSlug } from "../utils/stringUtils";
+import { useMemberStore } from "../../features/members/store/memberStore";
 
 export interface Option {
   value: string;
@@ -66,6 +67,7 @@ interface AppStore {
   addDemand: (demand: DemandFormData) => Promise<void>;
   updateDemand: (id: string, demand: Partial<Demand>, justification?: string, attachment?: { type: 'image' | 'pdf', url: string, name: string }) => Promise<void>;
   removeDemand: (id: string) => Promise<void>;
+  clearDemands: () => Promise<void>;
   loadDemands: () => Promise<void>;
   isLoadingDemands: boolean;
 }
@@ -327,6 +329,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         { value: "em-analise", label: "Em Análise" },
         { value: "em-processo", label: "Em Processo", badge: { text: "No Prazo", color: "info" } },
         { value: "em-processo-fora-do-prazo", label: "Em Processo", badge: { text: "Fora do Prazo", color: "error" } },
+        { value: "acoes-do-gabinete", label: "Ações do Gabinete", badge: { text: "Gabinete", color: "warning" } },
         { value: "concluido", label: "Concluído" },
       ];
 
@@ -387,7 +390,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
   // Ações de Demandas
   addDemand: async (demandData) => {
     try {
-      const newDemand = await saveDemand(demandData);
+      const { members } = useMemberStore.getState();
+      const responsibleId = demandData.responsibleId;
+      const actorName = responsibleId ? (members.find(m => m.id === responsibleId)?.name || 'Sistema') : 'Sistema';
+
+      const newDemand = await saveDemand(demandData, actorName);
       set((state) => ({
         demands: [newDemand, ...state.demands],
       }));
@@ -409,17 +416,41 @@ export const useAppStore = create<AppStore>((set, get) => ({
       let dataToUpdate: Partial<Demand> = { ...demandData };
       let newStatus = demandData.status;
 
-      // Check if deadline was updated and update status accordingly
+      const now = new Date();
+      // Handle deadline changes and automatic status updates
       if (demandData.deadline !== undefined) {
-          const now = new Date();
           const deadline = demandData.deadline ? new Date(demandData.deadline) : undefined;
           
-          if (deadline && currentDemand.status === 'em-processo' && now > deadline) {
+          if (deadline) {
+             // If updating deadline, re-evaluate status based on expiration
+             if (now > deadline) {
+                // If expired, force status to overdue if it was 'em-processo' or 'em-processo-fora-do-prazo'
+                if (newStatus === 'em-processo' || currentDemand.status === 'em-processo' || currentDemand.status === 'em-processo-fora-do-prazo') {
+                   newStatus = 'em-processo-fora-do-prazo';
+                }
+             } else {
+                // If valid deadline, revert overdue to 'em-processo'
+                if (newStatus === 'em-processo-fora-do-prazo' || currentDemand.status === 'em-processo-fora-do-prazo') {
+                   newStatus = 'em-processo';
+                }
+             }
+          }
+      } else if (newStatus === 'em-processo') {
+          // If just changing status to 'em-processo', check existing deadline
+          const deadline = currentDemand.deadline ? new Date(currentDemand.deadline) : undefined;
+          if (deadline && now > deadline) {
              newStatus = 'em-processo-fora-do-prazo';
-          } else if (deadline && currentDemand.status === 'em-processo-fora-do-prazo' && now <= deadline) {
-             newStatus = 'em-processo';
           }
       }
+
+      // Get actor name based on current responsible
+      const { members } = useMemberStore.getState();
+      const getActorName = (responsibleId?: string) => {
+          if (!responsibleId) return 'Sistema';
+          const member = members.find(m => m.id === responsibleId);
+          return member ? member.name : 'Sistema';
+      };
+      const actorName = getActorName(currentDemand.responsibleId);
 
       // Handle status history tracking
       if (newStatus && newStatus !== currentDemand.status) {
@@ -441,6 +472,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         history.push({
           status: newStatus!,
           startDate: now,
+          responsibleId: dataToUpdate.responsibleId || currentDemand.responsibleId
         });
         
         dataToUpdate.status = newStatus;
@@ -458,9 +490,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
             metadata: {
                 from: currentDemand.status,
                 to: newStatus,
-                justification: justification
+                justification: justification,
+                responsibleId: dataToUpdate.responsibleId
             },
-            user: 'Sistema' // TODO: Get current user
+            user: actorName
         });
 
         if (attachment) {
@@ -474,7 +507,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
                     attachmentUrl: attachment.url,
                     attachmentType: attachment.type
                 },
-                user: 'Sistema'
+                user: actorName
             });
         }
 
@@ -485,14 +518,56 @@ export const useAppStore = create<AppStore>((set, get) => ({
             const timeline = currentDemand.timeline ? [...currentDemand.timeline] : [];
             
             // Check specific fields for timeline events
-            if (justification) {
+            if (dataToUpdate.responsibleId && dataToUpdate.responsibleId !== currentDemand.responsibleId) {
+                timeline.unshift({
+                    id: ulid(),
+                    type: 'updated',
+                    date: new Date(),
+                    title: 'Responsável atualizado',
+                    description: justification || 'Responsável alterado',
+                    metadata: {
+                        from: currentDemand.responsibleId,
+                        to: dataToUpdate.responsibleId,
+                        justification: justification
+                    },
+                    user: actorName
+                });
+            }
+
+            // Check for deadline changes
+            if (dataToUpdate.deadline !== undefined) {
+                const currentDeadline = currentDemand.deadline ? new Date(currentDemand.deadline).getTime() : null;
+                const newDeadline = dataToUpdate.deadline ? new Date(dataToUpdate.deadline).getTime() : null;
+                
+                if (currentDeadline !== newDeadline) {
+                     const formattedCurrent = currentDeadline ? new Date(currentDeadline).toLocaleDateString('pt-BR') : 'Sem prazo';
+                     const formattedNew = newDeadline ? new Date(newDeadline).toLocaleDateString('pt-BR') : 'Sem prazo';
+                     
+                     timeline.unshift({
+                        id: ulid(),
+                        type: 'updated',
+                        date: new Date(),
+                        title: 'Prazo atualizado',
+                        description: `Prazo alterado\nDe: ${formattedCurrent}\nPara: ${formattedNew}`,
+                        metadata: {
+                            from: currentDemand.deadline,
+                            to: dataToUpdate.deadline,
+                            field: 'deadline',
+                            justification: justification
+                        },
+                        user: actorName
+                    });
+                }
+            }
+
+            if (justification && !dataToUpdate.responsibleId) {
                  timeline.unshift({
                     id: ulid(),
                     type: 'updated',
                     date: new Date(),
                     title: 'Demanda atualizada',
                     description: justification,
-                    user: 'Sistema'
+                    user: actorName
                 });
             }
             
@@ -507,7 +582,83 @@ export const useAppStore = create<AppStore>((set, get) => ({
                         attachmentUrl: attachment.url,
                         attachmentType: attachment.type
                     },
-                    user: 'Sistema'
+                    user: actorName
+                });
+            }
+
+            // Check for tratativas changes (add, remove, update)
+            if (dataToUpdate.tratativas) {
+                const currentTratativas = currentDemand.tratativas || [];
+                const newTratativas = dataToUpdate.tratativas;
+                const { tratativaOptions } = get();
+
+                // 1. Added Tratativas
+                const addedTratativas = newTratativas.filter(t => !currentTratativas.some(ct => ct.id === t.id));
+                addedTratativas.forEach(t => {
+                    const typeOption = tratativaOptions.find(o => o.id === t.tratativaId);
+                    const typeLabel = typeOption ? typeOption.title : t.tratativaId;
+
+                    timeline.unshift({
+                        id: ulid(),
+                        type: 'tratativa',
+                        date: new Date(),
+                        title: `Adicionada nova tratativa: ${typeLabel}`,
+                        description: t.description,
+                        metadata: {
+                            tratativaId: t.id,
+                            tratativaType: t.tratativaId,
+                            tratativaTitle: t.title,
+                            action: 'added'
+                        },
+                        user: actorName
+                    });
+                });
+
+                // 2. Removed Tratativas
+                const removedTratativas = currentTratativas.filter(ct => !newTratativas.some(nt => nt.id === ct.id));
+                removedTratativas.forEach(t => {
+                    const typeOption = tratativaOptions.find(o => o.id === t.tratativaId);
+                    const typeLabel = typeOption ? typeOption.title : t.tratativaId;
+
+                    timeline.unshift({
+                        id: ulid(),
+                        type: 'tratativa',
+                        date: new Date(),
+                        title: `Tratativa removida: ${typeLabel}`,
+                        description: t.description,
+                        metadata: {
+                            tratativaId: t.id,
+                            tratativaType: t.tratativaId,
+                            tratativaTitle: t.title,
+                            action: 'removed'
+                        },
+                        user: actorName
+                    });
+                });
+
+                // 3. Updated Tratativas (Status Change)
+                newTratativas.forEach(nt => {
+                    const ct = currentTratativas.find(t => t.id === nt.id);
+                    if (ct && ct.completed !== nt.completed) {
+                        const typeOption = tratativaOptions.find(o => o.id === nt.tratativaId);
+                        const typeLabel = typeOption ? typeOption.title : nt.tratativaId;
+                        const action = nt.completed ? "Concluída" : "Reaberta";
+
+                        timeline.unshift({
+                            id: ulid(),
+                            type: 'tratativa',
+                            date: new Date(),
+                            title: `Tratativa ${action}: ${typeLabel}`,
+                            description: nt.description,
+                            metadata: {
+                                tratativaId: nt.id,
+                                tratativaType: nt.tratativaId,
+                                tratativaTitle: nt.title,
+                                action: nt.completed ? 'completed' : 'reopened'
+                            },
+                            user: actorName
+                        });
+                    }
                 });
             }
 
@@ -537,10 +688,91 @@ export const useAppStore = create<AppStore>((set, get) => ({
       throw error;
     }
   },
+  clearDemands: async () => {
+    try {
+      await deleteAllDemands();
+      set({ demands: [] });
+    } catch (error) {
+      console.error("Failed to clear demands:", error);
+      throw error;
+    }
+  },
   loadDemands: async () => {
     set({ isLoadingDemands: true });
     try {
       const demands = await getAllDemands();
+      const now = new Date();
+      let hasUpdates = false;
+
+      // Check for expired demands and update them
+      for (const demand of demands) {
+        if (demand.status === 'em-processo' && demand.deadline) {
+          const deadlineDate = new Date(demand.deadline);
+          // Check if deadline has passed
+          if (now > deadlineDate) {
+            const newStatus = 'em-processo-fora-do-prazo';
+            
+            // Calculate status history
+            let history = demand.statusHistory ? [...demand.statusHistory] : [];
+            let totalDuration = demand.totalDuration || 0;
+
+            // Close previous status entry
+            if (history.length > 0) {
+              const lastEntry = history[history.length - 1];
+              if (!lastEntry.endDate) {
+                lastEntry.endDate = now;
+                lastEntry.duration = now.getTime() - new Date(lastEntry.startDate).getTime();
+                totalDuration += lastEntry.duration;
+              }
+            }
+
+            // Add new status entry
+            history.push({
+              status: newStatus,
+              startDate: now,
+            });
+
+            // Add timeline event
+            const timeline = demand.timeline ? [...demand.timeline] : [];
+            timeline.unshift({
+              id: ulid(),
+              type: 'status_change',
+              date: now,
+              title: 'Prazo Expirado',
+              description: 'O prazo desta demanda expirou. Status alterado automaticamente para "Em Processo Fora do Prazo".',
+              metadata: {
+                from: demand.status,
+                to: newStatus,
+                justification: 'Prazo expirado'
+              },
+              user: 'Sistema'
+            });
+
+            // Update in DB
+            const updatedData = {
+              status: newStatus,
+              statusHistory: history,
+              totalDuration: totalDuration,
+              timeline: timeline
+            };
+
+            await updateDemand(demand.id, updatedData);
+
+            // Update local object
+            demand.status = newStatus;
+            demand.statusHistory = history;
+            demand.totalDuration = totalDuration;
+            demand.timeline = timeline;
+            
+            hasUpdates = true;
+          }
+        }
+      }
+
+      if (hasUpdates) {
+        console.log("Demands updated due to expiration.");
+      }
+
       // Sort by createdAt desc
       const sortedDemands = demands.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       

@@ -3,8 +3,9 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useNavigate } from "react-router";
 import Swal from "sweetalert2";
-import { Eye, Edit2, Trash2, Clock, Calendar } from "lucide-react";
+import { Eye, Edit2, Trash2, Clock, Calendar, User } from "lucide-react";
 import { Demand, useAppStore } from "../../../../shared/store/appStore";
+import { useMemberStore } from "../../../members/store/memberStore";
 import Badge from "../../../../shared/components/ui/badge/Badge";
 
 interface KanbanCardProps {
@@ -30,6 +31,9 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const { removeDemand } = useAppStore();
+  const { members } = useMemberStore();
+
+  const responsibleMember = demand.responsibleId ? members.find(m => m.id === demand.responsibleId) : null;
 
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -149,8 +153,14 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[80px]" title={demand.requesterName}>
                    {demand.requesterName}
                </span>
+               {responsibleMember && (
+                 <div className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400 mt-0.5" title={`Responsável: ${responsibleMember.name}`}>
+                   <User size={10} />
+                   <span className="truncate max-w-[80px]">{responsibleMember.name}</span>
+                 </div>
+               )}
                {demand.deadline && (
-                 <div className={`flex items-center gap-1 text-[10px] ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                 <div className={`flex items-center gap-1 text-[10px] ${isOverdue ? 'text-red-500 font-medium' : 'text-green-500 font-medium'}`}>
                    <Calendar size={10} />
                    <span>{new Date(demand.deadline).toLocaleDateString('pt-BR')}</span>
                  </div>

@@ -11,18 +11,27 @@ import { DemandTimeline } from "../components/DemandTimeline";
 import { DemandMap } from "../components/DemandMap";
 import { DemandTratativas } from "../components/DemandTratativas";
 import { DeadlineModal } from "../components/DeadlineModal";
-import { Clock } from "lucide-react";
+import { StatusChangeModal } from "../components/StatusChangeModal";
+import { useMemberStore } from "../../members/store/memberStore";
+import { Clock, User } from "lucide-react";
 
 export const DemandDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { categoryOptions, urgencyOptions, statusOptions, updateDemand } = useAppStore();
+  const { members, loadMembers } = useMemberStore();
   const [demand, setDemand] = useState<Demand | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Deadline Modal State
   const [isDeadlineModalOpen, setIsDeadlineModalOpen] = useState(false);
   const [isSavingDeadline, setIsSavingDeadline] = useState(false);
+  
+  // Status Change Modal State
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [newStatusValue, setNewStatusValue] = useState<string | null>(null);
+  const [modalMode, setModalMode] = useState<'status-change' | 'responsible-change'>('status-change');
+  const [isSavingStatus, setIsSavingStatus] = useState(false);
   
   // Pending Status Change State (similar to KanbanBoard)
   const [pendingStatusChange, setPendingStatusChange] = useState<string | null>(null);
@@ -47,6 +56,7 @@ export const DemandDetails: React.FC = () => {
 
   useEffect(() => {
     loadDemand();
+    loadMembers();
   }, [id, navigate]);
 
   const handleDemandUpdate = () => {
@@ -100,6 +110,65 @@ export const DemandDetails: React.FC = () => {
         console.error("Failed to reopen demand", error);
         Swal.fire("Erro", "Falha ao reabrir demanda", "error");
     }
+  };
+
+  const handleStatusChange = (status: string) => {
+    setNewStatusValue(status);
+    setModalMode('status-change');
+    setIsStatusModalOpen(true);
+  };
+
+  const handleConfirmStatusChange = async (
+    justification: string, 
+    attachment: { type: 'image' | 'pdf', url: string, name: string } | null | undefined, 
+    responsibleId?: string
+  ) => {
+    const statusToUpdate = newStatusValue || demand?.status;
+
+    if (!demand || !statusToUpdate) return;
+
+    setIsSavingStatus(true);
+    try {
+      await updateDemand(
+        demand.id, 
+        { 
+          status: statusToUpdate,
+          responsibleId: responsibleId 
+        }, 
+        justification,
+        attachment || undefined
+      );
+      
+      setIsStatusModalOpen(false);
+      setNewStatusValue(null);
+      loadDemand();
+
+      await Swal.fire({
+        title: "Sucesso",
+        text: "Status atualizado com sucesso!",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error("Failed to update status", error);
+      Swal.fire("Erro", "Falha ao atualizar status", "error");
+    } finally {
+      setIsSavingStatus(false);
+    }
+  };
+
+  const handleResponsibleChange = () => {
+    // Open modal with current status to just change responsible
+    setNewStatusValue(demand?.status || "em-analise");
+    setModalMode('responsible-change');
+    setIsStatusModalOpen(true);
+  }
+
+  const getResponsibleName = (id?: string) => {
+    if (!id) return "Não atribuído";
+    const member = members.find(m => m.id === id);
+    return member?.name || "Usuário não encontrado";
   };
 
   const getCategoryLabel = (slug: string) => {
@@ -285,100 +354,8 @@ export const DemandDetails: React.FC = () => {
         </div>
 
         <div className="xl:col-span-1 space-y-6">
-          {/* Localização */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
-            <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white">
-              Localização
-            </h3>
-            <div className="h-48 w-full overflow-hidden rounded-lg">
-                <DemandMap location={demand.location} />
-            </div>
-          </div>
 
-          {/* Status e Prioridade */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
-            <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white">
-              Status e Prioridade
-            </h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Status Atual
-                </label>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    size="md"
-                    color={getStatusBadgeColor(demand.status || "em-analise")}
-                  >
-                    {getStatusLabel(demand.status || "em-analise")}
-                  </Badge>
-                  {(() => {
-                    const status = statusOptions.find(opt => opt.value === (demand.status || "em-analise"));
-                    if (status?.badge?.text) {
-                      return (
-                        <Badge
-                          size="md"
-                          variant="light"
-                          color={status.badge.color || "light"}
-                        >
-                          {status.badge.text}
-                        </Badge>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
-              </div>
-
-              {demand.status !== 'concluido' && (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
-                    Tempo em Aberto
-                  </label>
-                  <div className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-white">
-                    <Clock size={16} className="text-gray-400" />
-                    <span>Essa demanda está aberta há {getDaysOpen(demand.createdAt)} dia(s)</span>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Urgência
-                </label>
-                <div>
-                  <Badge
-                    size="md"
-                    color={getUrgencyBadgeColor(demand.urgency)}
-                  >
-                    {getUrgencyLabel(demand.urgency)}
-                  </Badge>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Prazo
-                </label>
-                <div 
-                    className={`text-sm font-medium ${demand.deadline ? 'text-gray-800 dark:text-white' : 'text-gray-400'} ${demand.status === 'concluido' ? 'cursor-not-allowed' : 'cursor-pointer hover:underline'}`}
-                    onClick={() => {
-                        if (demand.status === 'concluido') return;
-                        setPendingStatusChange(null);
-                        setIsDeadlineModalOpen(true);
-                    }}
-                >
-                  {formatDeadline(demand.deadline)} 
-                  {demand.status !== 'concluido' && (
-                    <span className="ml-2 text-xs text-blue-500">(Editar)</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Solicitante */}
+           {/* Solicitante */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
             <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white">
               Dados do Solicitante
@@ -405,6 +382,105 @@ export const DemandDetails: React.FC = () => {
             </div>
           </div>
 
+          {/* Localização */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+            <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white">
+              Localização
+            </h3>
+            <div className="h-48 w-full overflow-hidden rounded-lg">
+                <DemandMap location={demand.location} />
+            </div>
+          </div>
+
+          {/* Status e Prioridade */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+            <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white">
+              Status e Prioridade
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Urgência
+                </label>
+                <div>
+                  <Badge
+                    size="md"
+                    color={getUrgencyBadgeColor(demand.urgency)}
+                  >
+                    {getUrgencyLabel(demand.urgency)}
+                  </Badge>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Status Atual
+                </label>
+                <div 
+                  className="flex items-center gap-2"
+                  title="Clique para alterar o status"
+                >
+                  <Badge
+                    size="md"
+                    color={getStatusBadgeColor(demand.status || "em-analise")}
+                  >
+                    {getStatusLabel(demand.status || "em-analise")}
+                  </Badge>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Responsável
+                </label>
+                <div 
+                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={handleResponsibleChange}
+                  title="Clique para alterar o responsável"
+                >
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-white">
+                    <User size={16} className="text-gray-400" />
+                    <span>{getResponsibleName(demand.responsibleId)}</span>
+                  </div>
+                  <span className="text-xs text-blue-500">(Alterar)</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Prazo
+                </label>
+                <div 
+                    className={`text-sm font-medium ${demand.deadline ? 'text-gray-800 dark:text-white' : 'text-gray-400'} ${demand.status === 'concluido' ? 'cursor-not-allowed' : 'cursor-pointer hover:underline'}`}
+                    onClick={() => {
+                        if (demand.status === 'concluido') return;
+                        setPendingStatusChange(null);
+                        setIsDeadlineModalOpen(true);
+                    }}
+                >
+                  {formatDeadline(demand.deadline)} 
+                  {demand.status !== 'concluido' && (
+                    <span className="ml-2 text-xs text-blue-500">(Editar)</span>
+                  )}
+                </div>
+              </div>
+
+              {demand.status !== 'concluido' && (
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
+                    Tempo em Aberto
+                  </label>
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-white">
+                    <Clock size={16} className="text-gray-400" />
+                    <span>Essa demanda está aberta há {getDaysOpen(demand.createdAt)} dia(s)</span>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+
           {/* Histórico da Demanda */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
             <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white">
@@ -422,6 +498,22 @@ export const DemandDetails: React.FC = () => {
         initialDate={demand?.deadline ? new Date(demand.deadline) : undefined}
         isLoading={isSavingDeadline}
       />
+
+      <StatusChangeModal
+        isOpen={isStatusModalOpen}
+        onClose={() => {
+          setIsStatusModalOpen(false);
+          setNewStatusValue(null);
+        }}
+        onConfirm={handleConfirmStatusChange}
+        oldStatusLabel={getStatusLabel(demand?.status || "em-analise")}
+        newStatusLabel={getStatusLabel(newStatusValue || demand?.status || "em-analise")}
+        newStatusValue={newStatusValue || demand?.status || "em-analise"}
+        initialResponsibleId={demand?.responsibleId}
+          enableResponsibleSelection={true}
+          mode={modalMode}
+          isLoading={isSavingStatus}
+        />
     </>
   );
 };
