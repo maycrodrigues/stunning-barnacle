@@ -180,7 +180,7 @@ export const DemandTratativas: React.FC<DemandTratativasProps> = ({
     return type ? type.title : "Desconhecido";
   };
   
-  const getTypeBadgeColor = (typeId: string) => {
+  const getTypeBadgeColor = () => {
       // Logic to assign colors based on type or just random/hash
       // For now, return a default style or map specific types if known
       return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
@@ -264,7 +264,7 @@ export const DemandTratativas: React.FC<DemandTratativasProps> = ({
                             >
                             {tratativa.title}
                         </span>
-                        <span className={`inline-flex w-fit items-center rounded px-2 py-0.5 text-xs font-medium ${getTypeBadgeColor(tratativa.tratativaId)}`}>
+                        <span className={`inline-flex w-fit items-center rounded px-2 py-0.5 text-xs font-medium ${getTypeBadgeColor()}`}>
                             {getTypeLabel(tratativa.tratativaId)}
                         </span>
                     </div>

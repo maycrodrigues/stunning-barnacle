@@ -3,7 +3,6 @@ import PageBreadcrumb from "../../../shared/components/common/PageBreadCrumb";
 import PageMeta from "../../../shared/components/common/PageMeta";
 import { Loader } from "../../../shared/components/ui/loader";
 import { CreateDemandButton, DemandEmptyState, DemandGroupedList, CreateFakeDemandButton, DeleteAllDemandsButton } from "../components";
-import { DemandSearch } from "../components/DemandSearch";
 import { useAppStore } from "../../../shared/store/appStore";
 
 export const DemandList: React.FC = () => {

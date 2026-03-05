@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Member } from "../../../shared/services/db";
+import { syncService } from "../../../shared/services/sync";
 import { getAllMembers, saveMember, updateMember as updateMemberService, deleteMember as deleteMemberService } from "../../../shared/services/memberService";
 
 interface MemberStore {
@@ -7,12 +8,12 @@ interface MemberStore {
   isLoading: boolean;
   error: string | null;
   loadMembers: () => Promise<void>;
-  addMember: (memberData: Omit<Member, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  addMember: (memberData: Omit<Member, "id" | "createdAt" | "updatedAt" | "tenantId">) => Promise<Member>;
   updateMember: (id: string, updates: Partial<Member>) => Promise<void>;
   removeMember: (id: string) => Promise<void>;
 }
 
-export const useMemberStore = create<MemberStore>((set, get) => ({
+export const useMemberStore = create<MemberStore>((set) => ({
   members: [],
   isLoading: false,
   error: null,
@@ -38,6 +39,8 @@ export const useMemberStore = create<MemberStore>((set, get) => ({
         members: [...state.members, newMember].sort((a, b) => a.name.localeCompare(b.name)),
         isLoading: false,
       }));
+      syncService.syncMembers().catch(console.error);
+      return newMember;
     } catch (error: any) {
       console.error("Failed to add member:", error);
       set({ error: error.message || "Erro ao adicionar membro", isLoading: false });
@@ -53,6 +56,7 @@ export const useMemberStore = create<MemberStore>((set, get) => ({
         members: state.members.map((m) => (m.id === id ? { ...m, ...updates, updatedAt: new Date() } : m)),
         isLoading: false,
       }));
+      syncService.syncMembers().catch(console.error);
     } catch (error: any) {
       console.error("Failed to update member:", error);
       set({ error: error.message || "Erro ao atualizar membro", isLoading: false });
@@ -68,6 +72,7 @@ export const useMemberStore = create<MemberStore>((set, get) => ({
         members: state.members.filter((m) => m.id !== id),
         isLoading: false,
       }));
+      syncService.syncMembers().catch(console.error);
     } catch (error: any) {
       console.error("Failed to remove member:", error);
       set({ error: error.message || "Erro ao remover membro", isLoading: false });

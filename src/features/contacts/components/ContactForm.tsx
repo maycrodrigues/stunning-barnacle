@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal } from "../../../shared/components/ui/modal";
-import { ContactFormData } from "../types";
+import Input from "../../../shared/components/form/input/InputField";
+import TextArea from "../../../shared/components/form/input/TextArea";
+import Label from "../../../shared/components/form/Label";
+import Button from "../../../shared/components/ui/button/Button";
+import { ContactFormData, contactSchema } from "../types";
 import { Contact } from "../../../shared/services/db";
 
 interface ContactFormProps {
@@ -8,6 +14,7 @@ interface ContactFormProps {
   onClose: () => void;
   onSubmit: (data: ContactFormData) => Promise<void>;
   initialData?: Contact;
+  initialValues?: Partial<ContactFormData>;
   isLoading?: boolean;
 }
 
@@ -16,28 +23,45 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   onClose,
   onSubmit,
   initialData,
+  initialValues,
   isLoading = false,
 }) => {
-  const [formData, setFormData] = useState<ContactFormData>({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    notes: "",
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ContactFormData>({
+    resolver: zodResolver(contactSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      notes: "",
+    },
   });
 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        setFormData({
+        reset({
           name: initialData.name,
           email: initialData.email || "",
           phone: initialData.phone || "",
           address: initialData.address || "",
           notes: initialData.notes || "",
         });
+      } else if (initialValues) {
+        reset({
+          name: initialValues.name || "",
+          email: initialValues.email || "",
+          phone: initialValues.phone || "",
+          address: initialValues.address || "",
+          notes: initialValues.notes || "",
+        });
       } else {
-        setFormData({
+        reset({
           name: "",
           email: "",
           phone: "",
@@ -46,11 +70,10 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         });
       }
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, initialValues, reset]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSubmit(formData);
+  const onFormSubmit = async (data: ContactFormData) => {
+    await onSubmit(data);
   };
 
   return (
@@ -64,91 +87,116 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Nome Completo *
-          </label>
-          <input
-            type="text"
-            required
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full rounded-lg border-gray-300 bg-white py-2.5 px-4 text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-brand-500"
-            placeholder="Ex: João da Silva"
+          <Label htmlFor="name">Nome Completo *</Label>
+          <Controller
+            name="name"
+            control={control}
+            render={({ field }) => (
+              <Input
+                {...field}
+                id="name"
+                placeholder="Ex: João da Silva"
+                error={!!errors.name}
+                hint={errors.name?.message}
+                className="bg-white dark:bg-gray-800"
+              />
+            )}
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full rounded-lg border-gray-300 bg-white py-2.5 px-4 text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-brand-500"
-              placeholder="joao@email.com"
+            <Label htmlFor="email">Email</Label>
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  id="email"
+                  type="email"
+                  placeholder="joao@email.com"
+                  error={!!errors.email}
+                  hint={errors.email?.message}
+                  className="bg-white dark:bg-gray-800"
+                />
+              )}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Telefone
-            </label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full rounded-lg border-gray-300 bg-white py-2.5 px-4 text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-brand-500"
-              placeholder="(00) 00000-0000"
+            <Label htmlFor="phone">Telefone</Label>
+            <Controller
+              name="phone"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  id="phone"
+                  type="tel"
+                  placeholder="(00) 00000-0000"
+                  error={!!errors.phone}
+                  hint={errors.phone?.message}
+                  className="bg-white dark:bg-gray-800"
+                />
+              )}
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Endereço
-          </label>
-          <input
-            type="text"
-            value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            className="w-full rounded-lg border-gray-300 bg-white py-2.5 px-4 text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-brand-500"
-            placeholder="Rua, Número, Bairro, Cidade - UF"
+          <Label htmlFor="address">Endereço</Label>
+          <Controller
+            name="address"
+            control={control}
+            render={({ field }) => (
+              <Input
+                {...field}
+                id="address"
+                placeholder="Rua, Número, Bairro, Cidade - UF"
+                error={!!errors.address}
+                hint={errors.address?.message}
+                className="bg-white dark:bg-gray-800"
+              />
+            )}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Observações
-          </label>
-          <textarea
-            rows={3}
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            className="w-full rounded-lg border-gray-300 bg-white py-2.5 px-4 text-gray-900 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-brand-500"
-            placeholder="Informações adicionais..."
+          <Label htmlFor="notes">Observações</Label>
+          <Controller
+            name="notes"
+            control={control}
+            render={({ field }) => (
+              <TextArea
+                {...field}
+                rows={3}
+                placeholder="Informações adicionais..."
+                error={!!errors.notes}
+                hint={errors.notes?.message}
+                className="bg-white dark:bg-gray-800"
+              />
+            )}
           />
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
             disabled={isLoading}
           >
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="px-4 py-2 text-sm font-medium text-white bg-brand-600 border border-transparent rounded-lg hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isLoading}
           >
             {isLoading ? "Salvando..." : initialData ? "Atualizar" : "Salvar"}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

@@ -112,11 +112,19 @@ export const DemandDetails: React.FC = () => {
     }
   };
 
-  const handleStatusChange = (status: string) => {
-    setNewStatusValue(status);
-    setModalMode('status-change');
-    setIsStatusModalOpen(true);
+  /*
+  const handleStatusChange = async (status: string) => {
+    if (!demand) return;
+    try {
+      await updateDemand(demand.id, { status });
+      const db = await getDB();
+      const updated = await db.get('demands', demand.id);
+      if (updated) setDemand(updated);
+    } catch (error) {
+      console.error("Failed to update status", error);
+    }
   };
+  */
 
   const handleConfirmStatusChange = async (
     justification: string, 

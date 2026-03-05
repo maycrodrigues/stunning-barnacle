@@ -1,5 +1,4 @@
 import React, { useMemo, useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router";
 import {
   DndContext,
   closestCorners,
@@ -14,11 +13,11 @@ import {
   DragEndEvent,
   DropAnimation,
 } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates, arrayMove } from "@dnd-kit/sortable";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { Demand, Option, useAppStore } from "../../../../shared/store/appStore";
 import { useMemberStore } from "../../../members/store/memberStore";
 import { KanbanColumn } from "./KanbanColumn";
-import { KanbanItem, KanbanCard } from "./KanbanItem";
+import { KanbanCard } from "./KanbanItem";
 import { createPortal } from "react-dom";
 import { DeadlineModal } from "../DeadlineModal";
 import { StatusChangeModal } from "../StatusChangeModal";
@@ -34,13 +33,11 @@ interface KanbanBoardProps {
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ demands, statusOptions }) => {
   const { updateDemand } = useAppStore();
   const { loadMembers } = useMemberStore();
-  const navigate = useNavigate();
   const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
     loadMembers();
   }, []);
-  const [activeOverId, setActiveOverId] = useState<string | null>(null);
   
   // Ref to keep demands up to date in drag callbacks
   const demandsRef = useRef(demands);
@@ -148,18 +145,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ demands, statusOptions
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
-    setActiveOverId(null);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { over } = event;
-    setActiveOverId(over ? (over.id as string) : null);
+  const handleDragOver = (_event: DragOverEvent) => {
+    // const { over } = event;
+    // setActiveOverId(over ? (over.id as string) : null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    setActiveOverId(null);
+    // setActiveOverId(null);
 
     if (!over) {
         setActiveId(null);

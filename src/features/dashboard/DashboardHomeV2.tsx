@@ -5,7 +5,6 @@ import { useAppStore } from "../../shared/store/appStore";
 import { DashboardFilter, DashboardFilters } from "./components/DashboardFilter";
 import { DashboardStats } from "./components/DashboardStats";
 import { DashboardCharts } from "./components/DashboardCharts";
-import { DemandSearch } from "../demands/components/DemandSearch";
 
 export const DashboardHomeV2: React.FC = () => {
   const { demands, categoryOptions, statusOptions, loadDemands } = useAppStore();

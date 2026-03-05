@@ -32,12 +32,14 @@ interface MemberFormProps {
   isOpen: boolean;
   onClose: () => void;
   memberToEdit?: Member | null;
+  onSuccess?: (member: Member) => void;
 }
 
 export const MemberForm: React.FC<MemberFormProps> = ({
   isOpen,
   onClose,
   memberToEdit,
+  onSuccess,
 }) => {
   const { roleOptions } = useAppStore();
   const { addMember, updateMember } = useMemberStore();
@@ -104,8 +106,10 @@ export const MemberForm: React.FC<MemberFormProps> = ({
     try {
       if (memberToEdit) {
         await updateMember(memberToEdit.id, data);
+        if (onSuccess) onSuccess({ ...memberToEdit, ...data }); // Rough approximation, but for edit we might not need to select it as new
       } else {
-        await addMember(data);
+        const newMember = await addMember(data);
+        if (onSuccess) onSuccess(newMember);
       }
       onClose();
       reset();

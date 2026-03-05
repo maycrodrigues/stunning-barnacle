@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, X, MapPin, User, FileText, Activity, AlertCircle } from "lucide-react";
+import { Search, X, User, FileText, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useAppStore, Demand } from "../../../shared/store/appStore";
 import Badge from "../../../shared/components/ui/badge/Badge";

@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, Upload, FileText, Image as ImageIcon, Trash2, ArrowRight, AlertCircle } from 'lucide-react';
+import { X, Upload, FileText, Image as ImageIcon, Trash2, ArrowRight, AlertCircle, Plus } from 'lucide-react';
 import Select from '../../../shared/components/form/Select';
 import { useMemberStore } from '../../members/store/memberStore';
+import { MemberForm } from '../../members/components/MemberForm';
+import { Member } from '../../../shared/services/db';
 
 interface StatusChangeModalProps {
   isOpen: boolean;
@@ -34,7 +36,15 @@ export const StatusChangeModal: React.FC<StatusChangeModalProps> = ({
   const [responsibleId, setResponsibleId] = useState('');
   const [error, setError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [isMemberFormOpen, setIsMemberFormOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleMemberSuccess = (newMember: Member) => {
+    setResponsibleId(newMember.id);
+    setIsMemberFormOpen(false);
+    // Ensure the new member is loaded in the store (it should be handled by the store, but forcing a reload or local update might be needed if loadMembers isn't reactive enough)
+    loadMembers(); 
+  };
 
   // Load members if needed
   useEffect(() => {
@@ -222,17 +232,33 @@ export const StatusChangeModal: React.FC<StatusChangeModalProps> = ({
               {/* Responsible Field */}
               {(newStatusValue === 'acoes-do-gabinete' || enableResponsibleSelection || mode === 'responsible-change') && (
                 <div className="mb-5">
-                  <Select
-                    label={`Responsável${(newStatusValue === 'acoes-do-gabinete' || mode === 'responsible-change') ? ' *' : ''}`}
-                    options={members.map(member => ({ value: member.id, label: member.name }))}
-                    value={responsibleId}
-                    onChange={(value) => {
-                      setResponsibleId(value);
-                      if (error) setError('');
-                    }}
-                    placeholder="Selecione um responsável"
-                    className="w-full"
-                  />
+                  {members.length > 0 ? (
+                    <Select
+                      label={`Responsável${(newStatusValue === 'acoes-do-gabinete' || mode === 'responsible-change') ? ' *' : ''}`}
+                      options={members.map(member => ({ value: member.id, label: member.name }))}
+                      value={responsibleId}
+                      onChange={(value) => {
+                        setResponsibleId(value);
+                        if (error) setError('');
+                      }}
+                      placeholder="Selecione um responsável"
+                      className="w-full"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 dark:border-gray-600 dark:bg-gray-700/30">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Nenhum membro encontrado.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsMemberFormOpen(true)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Cadastrar Novo Membro
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -360,6 +386,12 @@ export const StatusChangeModal: React.FC<StatusChangeModalProps> = ({
           </div>
         </div>
       </div>
+
+      <MemberForm
+        isOpen={isMemberFormOpen}
+        onClose={() => setIsMemberFormOpen(false)}
+        onSuccess={handleMemberSuccess}
+      />
     </div>
   );
 };

@@ -9,12 +9,10 @@ import {
   DragOverlay,
   defaultDropAnimationSideEffects,
   DragStartEvent,
-  DragOverEvent,
   DragEndEvent,
   DropAnimation,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
@@ -24,7 +22,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import Swal from "sweetalert2";
-import { Eye, Edit2, Trash2, Clock, ChevronDown, ChevronRight, User, Calendar, GripVertical, MessageSquare, ListTodo } from "lucide-react";
+import { Eye, Edit2, Trash2, ChevronDown, ChevronRight, User, Calendar, GripVertical, ListTodo } from "lucide-react";
 
 import { Demand, useAppStore, Option } from "../../../shared/store/appStore";
 import { useMemberStore } from "../../members/store/memberStore";
@@ -32,7 +30,6 @@ import Badge from "../../../shared/components/ui/badge/Badge";
 import { StatusChangeModal } from "./StatusChangeModal";
 import { CompletionTypeModal } from "./CompletionTypeModal";
 import { ActionBlockedModal } from "./ActionBlockedModal";
-import { DeadlineModal } from "./DeadlineModal";
 import { TratativasPreviewModal } from "./TratativasPreviewModal";
 
 // --- Components ---
@@ -388,7 +385,6 @@ interface DemandGroupedListProps {
 }
 
 export const DemandGroupedList: React.FC<DemandGroupedListProps> = ({ demands }) => {
-  const navigate = useNavigate();
   const { statusOptions, categoryOptions, urgencyOptions, updateDemand } = useAppStore();
   const { loadMembers } = useMemberStore();
   

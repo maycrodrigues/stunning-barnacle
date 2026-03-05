@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Input from "../../../shared/components/form/input/InputField";
@@ -9,6 +9,11 @@ import { LocationPicker } from "./LocationPicker";
 import { demandSchema, DemandFormData } from "../types";
 import { useAppStore } from "../../../shared/store/appStore";
 import { useMemberStore } from "../../members/store/memberStore";
+import { useContactsStore } from "../../contacts/store/contactsStore";
+import { Contact } from "../../../shared/services/db";
+import { ContactForm } from "../../contacts/components/ContactForm";
+import { ContactFormData } from "../../contacts/types";
+import { Plus } from "lucide-react";
 
 interface DemandFormProps {
   initialValues?: Partial<DemandFormData>;
@@ -27,11 +32,39 @@ export const DemandForm: React.FC<DemandFormProps> = ({
   className,
   submitLabel = "Salvar",
 }) => {
-  const { categoryOptions, urgencyOptions, statusOptions } = useAppStore();
+  const { categoryOptions, urgencyOptions } = useAppStore();
   const { members, loadMembers } = useMemberStore();
+  const { contacts, loadContacts, addContact } = useContactsStore();
+  
+  const [nameSuggestions, setNameSuggestions] = useState<Contact[]>([]);
+  const [contactSuggestions, setContactSuggestions] = useState<Contact[]>([]);
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+  const [showContactSuggestions, setShowContactSuggestions] = useState(false);
+  const [isContactFormOpen, setIsContactFormOpen] = useState(false);
+  const [contactFormInitialValues, setContactFormInitialValues] = useState<Partial<ContactFormData>>({});
+  
+  const nameInputRef = useRef<HTMLDivElement>(null);
+  const contactInputRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadMembers();
+    loadContacts();
+  }, [loadMembers, loadContacts]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (nameInputRef.current && !nameInputRef.current.contains(event.target as Node)) {
+        setShowNameSuggestions(false);
+      }
+      if (contactInputRef.current && !contactInputRef.current.contains(event.target as Node)) {
+        setShowContactSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const responsibleOptions = React.useMemo(() => {
@@ -47,6 +80,8 @@ export const DemandForm: React.FC<DemandFormProps> = ({
   const {
     control,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<DemandFormData>({
     resolver: zodResolver(demandSchema),
@@ -62,6 +97,64 @@ export const DemandForm: React.FC<DemandFormProps> = ({
       ...initialValues,
     },
   });
+
+  const requesterName = watch("requesterName");
+  const requesterContact = watch("requesterContact");
+
+  useEffect(() => {
+    if (requesterName && requesterName.length > 2) {
+      const filtered = contacts.filter(c => 
+        c.name.toLowerCase().includes(requesterName.toLowerCase())
+      );
+      setNameSuggestions(filtered);
+      setShowNameSuggestions(true);
+    } else {
+      setShowNameSuggestions(false);
+    }
+  }, [requesterName, contacts]);
+
+  useEffect(() => {
+    if (requesterContact && requesterContact.length > 2) {
+      const filtered = contacts.filter(c => {
+        const phoneMatch = c.phone?.includes(requesterContact);
+        const emailMatch = c.email?.toLowerCase().includes(requesterContact.toLowerCase());
+        return phoneMatch || emailMatch;
+      });
+      setContactSuggestions(filtered);
+      setShowContactSuggestions(true);
+    } else {
+      setShowContactSuggestions(false);
+    }
+  }, [requesterContact, contacts]);
+
+  const selectContact = (contact: Contact) => {
+    setValue("requesterName", contact.name);
+    setValue("requesterContact", contact.phone || contact.email || "");
+    setShowNameSuggestions(false);
+    setShowContactSuggestions(false);
+  };
+
+  const handleCreateContact = () => {
+    const isEmail = requesterContact && requesterContact.includes("@");
+    setContactFormInitialValues({
+      name: requesterName || "",
+      email: isEmail ? requesterContact : "",
+      phone: requesterContact && !isEmail ? requesterContact : "",
+    });
+    setIsContactFormOpen(true);
+    setShowNameSuggestions(false);
+    setShowContactSuggestions(false);
+  };
+
+  const handleContactSubmit = async (data: ContactFormData) => {
+    try {
+      const newContact = await addContact(data);
+      selectContact(newContact);
+      setIsContactFormOpen(false);
+    } catch (error) {
+      console.error("Erro ao criar contato:", error);
+    }
+  };
 
   return (
     <div className={className}>
@@ -268,47 +361,147 @@ export const DemandForm: React.FC<DemandFormProps> = ({
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Controller
-                  name="requesterName"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      placeholder="Nome completo *"
-                      hint={errors.requesterName?.message}
-                      error={!!errors.requesterName}
-                      className="bg-white dark:bg-gray-800"
-                    />
+                <div className="relative" ref={nameInputRef}>
+                  <Controller
+                    name="requesterName"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        placeholder="Nome completo *"
+                        hint={errors.requesterName?.message}
+                        error={!!errors.requesterName}
+                        className="bg-white dark:bg-gray-800"
+                        autoComplete="off"
+                        onFocus={() => {
+                          if (field.value && field.value.length > 2) {
+                            const filtered = contacts.filter(c => 
+                              c.name.toLowerCase().includes(field.value.toLowerCase())
+                            );
+                            setNameSuggestions(filtered);
+                            setShowNameSuggestions(true);
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                  {showNameSuggestions && (
+                    <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-gray-800 sm:text-sm">
+                      {nameSuggestions.map((contact) => (
+                        <li
+                          key={contact.id}
+                          className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 hover:bg-brand-100 dark:text-gray-100 dark:hover:bg-brand-900/30"
+                          onClick={() => selectContact(contact)}
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium">{contact.name}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {contact.phone || contact.email || "Sem contato"}
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                      {nameSuggestions.length === 0 && (
+                        <li
+                          className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                          onClick={handleCreateContact}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Plus className="h-4 w-4" />
+                            <span className="font-medium">Cadastrar novo contato</span>
+                          </div>
+                        </li>
+                      )}
+                    </ul>
                   )}
-                />
+                </div>
 
-                <Controller
-                  name="requesterContact"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      placeholder="Telefone ou E-mail"
-                      hint={errors.requesterContact?.message}
-                      error={!!errors.requesterContact}
-                      className="bg-white dark:bg-gray-800"
-                    />
+                <div className="relative" ref={contactInputRef}>
+                  <Controller
+                    name="requesterContact"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        placeholder="Telefone ou E-mail"
+                        hint={errors.requesterContact?.message}
+                        error={!!errors.requesterContact}
+                        className="bg-white dark:bg-gray-800"
+                        autoComplete="off"
+                        onFocus={() => {
+                          if (field.value && field.value.length > 2) {
+                            const filtered = contacts.filter(c => {
+                              const phoneMatch = c.phone?.includes(field.value);
+                              const emailMatch = c.email?.toLowerCase().includes(field.value.toLowerCase());
+                              return phoneMatch || emailMatch;
+                            });
+                            setContactSuggestions(filtered);
+                            setShowContactSuggestions(true);
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                  {showContactSuggestions && (
+                    <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-gray-800 sm:text-sm">
+                      {contactSuggestions.map((contact) => (
+                        <li
+                          key={contact.id}
+                          className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 hover:bg-brand-100 dark:text-gray-100 dark:hover:bg-brand-900/30"
+                          onClick={() => selectContact(contact)}
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium">{contact.name}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {contact.phone || contact.email || "Sem contato"}
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                      {contactSuggestions.length === 0 && (
+                        <li
+                          className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                          onClick={handleCreateContact}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Plus className="h-4 w-4" />
+                            <span className="font-medium">Cadastrar novo contato</span>
+                          </div>
+                        </li>
+                      )}
+                    </ul>
                   )}
-                />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-700">
-          <Button variant="outline" onClick={onCancel} type="button" disabled={isLoading}>
-            Cancelar
-          </Button>
-          <Button variant="primary" type="submit" disabled={isLoading}>
-            {isLoading ? "Salvando..." : submitLabel}
-          </Button>
+          <div className="col-span-1 flex items-center justify-end gap-3 lg:col-span-2">
+            {onCancel && (
+              <Button
+                variant="outline"
+                onClick={onCancel}
+                disabled={isLoading}
+              >
+                Cancelar
+              </Button>
+            )}
+            <Button
+              type="submit"
+              disabled={isLoading}
+            >
+              {isLoading ? "Salvando..." : submitLabel}
+            </Button>
+          </div>
         </div>
       </form>
+
+      <ContactForm
+        isOpen={isContactFormOpen}
+        onClose={() => setIsContactFormOpen(false)}
+        onSubmit={handleContactSubmit}
+        initialValues={contactFormInitialValues}
+      />
     </div>
   );
 };

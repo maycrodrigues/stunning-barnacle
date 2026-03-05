@@ -18,7 +18,7 @@ import {
 import { useAppStore, Option } from "../../../shared/store/appStore";
 import Button from "../../../shared/components/ui/button/Button";
 import Input from "../../../shared/components/form/input/InputField";
-import { PencilIcon, TrashBinIcon, CheckLineIcon, CloseLineIcon, DragHandleIcon, PlusIcon } from "../../../shared/icons";
+import { PencilIcon, TrashBinIcon, CheckLineIcon, CloseLineIcon, PlusIcon } from "../../../shared/icons";
 import { SortableItem } from "../../../shared/components/ui/sortable/SortableItem";
 
 import { generateSlug } from "../../../shared/utils/stringUtils";

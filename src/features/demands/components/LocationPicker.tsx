@@ -105,6 +105,7 @@ export const LocationPicker = ({ value, onChange, className }: LocationPickerPro
         />
         <MapResizer />
         <LocationMarker position={position} setPosition={handleSetPosition} />
+        <MapCenterController center={initialCenter} />
       </MapContainer>
       <div className="bg-white dark:bg-gray-800 p-2 text-center text-xs text-gray-500 border-t border-gray-200 dark:border-gray-700">
         Clique no mapa para selecionar a localização

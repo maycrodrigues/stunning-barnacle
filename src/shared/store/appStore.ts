@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { ulid } from "ulid";
 import { DemandFormData } from "../../features/demands/types";
 import { saveDemand, getAllDemands, saveSettings, getSettings, updateDemand, deleteDemand, deleteAllDemands, StatusHistoryEntry, TimelineEvent, Tratativa, DemandTratativa } from "../services/db";
+import { syncService } from "../services/sync";
 import { generateSlug } from "../utils/stringUtils";
 import { useMemberStore } from "../../features/members/store/memberStore";
 
@@ -17,6 +18,7 @@ export interface Option {
 export interface Demand extends DemandFormData {
   id: string;
   createdAt: Date;
+  updatedAt: Date;
   protocol: string;
   status: string;
   statusHistory?: StatusHistoryEntry[];
@@ -108,6 +110,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
       const newCategories = [...state.categoryOptions, option];
       saveSettings(newCategories, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { categoryOptions: newCategories };
     });
   },
@@ -115,6 +118,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => {
       const newCategories = state.categoryOptions.filter((opt) => opt.value !== value);
       saveSettings(newCategories, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { categoryOptions: newCategories };
     });
   },
@@ -128,12 +132,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
         opt.value === value ? { ...opt, label: newLabel, value: newSlug } : opt
       );
       saveSettings(newCategories, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { categoryOptions: newCategories };
     });
   },
   reorderCategories: (newOrder) => {
     set((state) => {
       saveSettings(newOrder, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { categoryOptions: newOrder };
     });
   },
@@ -146,6 +152,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
       const newUrgencies = [...state.urgencyOptions, option];
       saveSettings(state.categoryOptions, newUrgencies, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { urgencyOptions: newUrgencies };
     });
   },
@@ -153,6 +160,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => {
       const newUrgencies = state.urgencyOptions.filter((opt) => opt.value !== value);
       saveSettings(state.categoryOptions, newUrgencies, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { urgencyOptions: newUrgencies };
     });
   },
@@ -166,12 +174,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
         opt.value === value ? { ...opt, label: newLabel, value: newSlug } : opt
       );
       saveSettings(state.categoryOptions, newUrgencies, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { urgencyOptions: newUrgencies };
     });
   },
   reorderUrgencies: (newOrder) => {
     set((state) => {
       saveSettings(state.categoryOptions, newOrder, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { urgencyOptions: newOrder };
     });
   },
@@ -184,6 +194,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
       const newStatus = [...state.statusOptions, option];
       saveSettings(state.categoryOptions, state.urgencyOptions, newStatus, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { statusOptions: newStatus };
     });
   },
@@ -195,6 +206,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
       const newStatus = state.statusOptions.filter((opt) => opt.value !== value);
       saveSettings(state.categoryOptions, state.urgencyOptions, newStatus, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { statusOptions: newStatus };
     });
   },
@@ -216,12 +228,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
         opt.value === value ? { ...opt, label: newLabel, value: newSlug, badge: newBadge } : opt
       );
       saveSettings(state.categoryOptions, state.urgencyOptions, newStatus, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { statusOptions: newStatus };
     });
   },
   reorderStatus: (newOrder) => {
     set((state) => {
       saveSettings(state.categoryOptions, state.urgencyOptions, newOrder, state.tratativaOptions, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { statusOptions: newOrder };
     });
   },
@@ -234,6 +248,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
       const newTratativas = [...state.tratativaOptions, tratativa];
       saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newTratativas, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { tratativaOptions: newTratativas };
     });
   },
@@ -241,6 +256,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => {
       const newTratativas = state.tratativaOptions.filter((opt) => opt.id !== id);
       saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newTratativas, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { tratativaOptions: newTratativas };
     });
   },
@@ -254,12 +270,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
         opt.id === id ? { ...opt, title, type, slug } : opt
       );
       saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newTratativas, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { tratativaOptions: newTratativas };
     });
   },
   reorderTratativas: (newOrder) => {
     set((state) => {
       saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newOrder, state.roleOptions);
+      syncService.syncSettings().catch(console.error);
       return { tratativaOptions: newOrder };
     });
   },
@@ -271,6 +289,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
       const newRoles = [...state.roleOptions, option];
       saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newRoles);
+      syncService.syncSettings().catch(console.error);
       return { roleOptions: newRoles };
     });
   },
@@ -278,6 +297,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => {
       const newRoles = state.roleOptions.filter((opt) => opt.value !== value);
       saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newRoles);
+      syncService.syncSettings().catch(console.error);
       return { roleOptions: newRoles };
     });
   },
@@ -290,12 +310,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
         opt.value === value ? { ...opt, label: newLabel, value: newSlug } : opt
       );
       saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newRoles);
+      syncService.syncSettings().catch(console.error);
       return { roleOptions: newRoles };
     });
   },
   reorderRoles: (newOrder) => {
     set((state) => {
       saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newOrder);
+      syncService.syncSettings().catch(console.error);
       return { roleOptions: newOrder };
     });
   },
@@ -398,6 +420,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       set((state) => ({
         demands: [newDemand, ...state.demands],
       }));
+      syncService.syncDemands().catch(console.error);
     } catch (error) {
       console.error("Failed to save demand:", error);
       throw error;
@@ -671,6 +694,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         set((state) => ({
           demands: state.demands.map((d) => (d.id === id ? updatedDemand : d)),
         }));
+        syncService.syncDemands().catch(console.error);
       }
     } catch (error) {
       console.error("Failed to update demand:", error);
@@ -683,6 +707,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       set((state) => ({
         demands: state.demands.filter((d) => d.id !== id),
       }));
+      syncService.syncDemands().catch(console.error);
     } catch (error) {
       console.error("Failed to delete demand:", error);
       throw error;
@@ -771,6 +796,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
       if (hasUpdates) {
         console.log("Demands updated due to expiration.");
+        syncService.syncDemands().catch(console.error);
       }
 
       // Sort by createdAt desc

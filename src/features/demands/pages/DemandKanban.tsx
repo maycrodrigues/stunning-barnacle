@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import PageMeta from "../../../shared/components/common/PageMeta";
 import PageBreadcrumb from "../../../shared/components/common/PageBreadCrumb";
 import { CreateDemandButton, DemandEmptyState, CreateFakeDemandButton, DeleteAllDemandsButton } from "../components";
-import { DemandSearch } from "../components/DemandSearch";
 import { KanbanBoard } from "../components/kanban/KanbanBoard";
 import { useAppStore } from "../../../shared/store/appStore";
 import { Loader } from "../../../shared/components/ui/loader";

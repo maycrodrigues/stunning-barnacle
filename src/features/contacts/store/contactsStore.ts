@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Contact, saveContact, updateContact, deleteContact, getAllContacts } from "../../../shared/services/db";
+import { syncService } from "../../../shared/services/sync";
 import { ContactFormData } from "../types";
 
 interface ContactsStore {
@@ -8,12 +9,12 @@ interface ContactsStore {
   error: string | null;
   
   loadContacts: () => Promise<void>;
-  addContact: (data: ContactFormData) => Promise<void>;
+  addContact: (data: ContactFormData) => Promise<Contact>;
   updateContact: (id: string, data: Partial<ContactFormData>) => Promise<void>;
   deleteContact: (id: string) => Promise<void>;
 }
 
-export const useContactsStore = create<ContactsStore>((set, get) => ({
+export const useContactsStore = create<ContactsStore>((set) => ({
   contacts: [],
   isLoading: false,
   error: null,
@@ -37,6 +38,8 @@ export const useContactsStore = create<ContactsStore>((set, get) => ({
         contacts: [newContact, ...state.contacts],
         isLoading: false 
       }));
+      syncService.syncContacts().catch(console.error);
+      return newContact;
     } catch (error) {
       console.error("Failed to add contact:", error);
       set({ error: "Falha ao adicionar contato", isLoading: false });
@@ -52,6 +55,7 @@ export const useContactsStore = create<ContactsStore>((set, get) => ({
         contacts: state.contacts.map((c) => (c.id === id ? updated : c)),
         isLoading: false,
       }));
+      syncService.syncContacts().catch(console.error);
     } catch (error) {
       console.error("Failed to update contact:", error);
       set({ error: "Falha ao atualizar contato", isLoading: false });
@@ -67,6 +71,7 @@ export const useContactsStore = create<ContactsStore>((set, get) => ({
         contacts: state.contacts.filter((c) => c.id !== id),
         isLoading: false,
       }));
+      syncService.syncContacts().catch(console.error);
     } catch (error) {
       console.error("Failed to delete contact:", error);
       set({ error: "Falha ao excluir contato", isLoading: false });
