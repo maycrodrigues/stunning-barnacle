@@ -10,6 +10,7 @@ import Select from "../../../shared/components/form/Select";
 import { useAppStore } from "../../../shared/store/appStore";
 import { useMemberStore } from "../store/memberStore";
 import { Member } from "../../../shared/services/db";
+import { maskPhone } from "../../../shared/utils/masks";
 
 const memberSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -146,12 +147,22 @@ export const MemberForm: React.FC<MemberFormProps> = ({
 
           <div>
             <Label htmlFor="phone">Telefone *</Label>
-            <Input
-                id="phone"
-                placeholder="(00) 00000-0000"
-                error={!!errors.phone}
-                hint={errors.phone?.message}
-                {...register("phone")}
+            <Controller
+              name="phone"
+              control={control}
+              render={({ field: { onChange, value, ...field } }) => (
+                <Input
+                  {...field}
+                  value={maskPhone(value || "")}
+                  onChange={(e) => onChange(maskPhone(e.target.value))}
+                  id="phone"
+                  type="tel"
+                  placeholder="(00) 00000-0000"
+                  error={!!errors.phone}
+                  hint={errors.phone?.message}
+                  maxLength={15}
+                />
+              )}
             />
           </div>
         </div>

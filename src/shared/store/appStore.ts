@@ -40,6 +40,7 @@ interface AppStore {
   statusOptions: Option[];
   tratativaOptions: Tratativa[];
   roleOptions: Option[];
+  politicalSpectrumOptions: Option[];
   defaultLocation: Location;
   addCategory: (option: Option) => void;
   removeCategory: (value: string) => void;
@@ -61,6 +62,10 @@ interface AppStore {
   removeRole: (value: string) => void;
   updateRole: (value: string, newLabel: string, newSlug: string) => void;
   reorderRoles: (newOrder: Option[]) => void;
+  addPoliticalSpectrum: (option: Option) => void;
+  removePoliticalSpectrum: (value: string) => void;
+  updatePoliticalSpectrum: (value: string, newLabel: string, newSlug: string) => void;
+  reorderPoliticalSpectrums: (newOrder: Option[]) => void;
   updateDefaultLocation: (location: Location) => void;
   loadSettings: () => Promise<void>;
 
@@ -99,6 +104,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   statusOptions: [],
   tratativaOptions: [],
   roleOptions: [],
+  politicalSpectrumOptions: [],
   defaultLocation: getInitialLocation(),
 
   // Ações de Configuração
@@ -109,7 +115,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
           throw new Error("Já existe uma categoria com este slug.");
       }
       const newCategories = [...state.categoryOptions, option];
-      saveSettings(newCategories, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      saveSettings(newCategories, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { categoryOptions: newCategories };
     });
@@ -117,7 +123,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   removeCategory: (value) => {
     set((state) => {
       const newCategories = state.categoryOptions.filter((opt) => opt.value !== value);
-      saveSettings(newCategories, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      saveSettings(newCategories, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { categoryOptions: newCategories };
     });
@@ -131,14 +137,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const newCategories = state.categoryOptions.map((opt) =>
         opt.value === value ? { ...opt, label: newLabel, value: newSlug } : opt
       );
-      saveSettings(newCategories, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      saveSettings(newCategories, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { categoryOptions: newCategories };
     });
   },
   reorderCategories: (newOrder) => {
     set((state) => {
-      saveSettings(newOrder, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      saveSettings(newOrder, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { categoryOptions: newOrder };
     });
@@ -151,7 +157,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
           throw new Error("Já existe uma urgência com este slug.");
       }
       const newUrgencies = [...state.urgencyOptions, option];
-      saveSettings(state.categoryOptions, newUrgencies, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      saveSettings(state.categoryOptions, newUrgencies, state.statusOptions, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { urgencyOptions: newUrgencies };
     });
@@ -159,7 +165,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   removeUrgency: (value) => {
     set((state) => {
       const newUrgencies = state.urgencyOptions.filter((opt) => opt.value !== value);
-      saveSettings(state.categoryOptions, newUrgencies, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      saveSettings(state.categoryOptions, newUrgencies, state.statusOptions, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { urgencyOptions: newUrgencies };
     });
@@ -173,14 +179,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const newUrgencies = state.urgencyOptions.map((opt) =>
         opt.value === value ? { ...opt, label: newLabel, value: newSlug } : opt
       );
-      saveSettings(state.categoryOptions, newUrgencies, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      saveSettings(state.categoryOptions, newUrgencies, state.statusOptions, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { urgencyOptions: newUrgencies };
     });
   },
   reorderUrgencies: (newOrder) => {
     set((state) => {
-      saveSettings(state.categoryOptions, newOrder, state.statusOptions, state.tratativaOptions, state.roleOptions);
+      saveSettings(state.categoryOptions, newOrder, state.statusOptions, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { urgencyOptions: newOrder };
     });
@@ -193,7 +199,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
           throw new Error("Já existe um status com este slug.");
       }
       const newStatus = [...state.statusOptions, option];
-      saveSettings(state.categoryOptions, state.urgencyOptions, newStatus, state.tratativaOptions, state.roleOptions);
+      saveSettings(state.categoryOptions, state.urgencyOptions, newStatus, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { statusOptions: newStatus };
     });
@@ -205,7 +211,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         throw new Error("Este status padrão não pode ser removido.");
       }
       const newStatus = state.statusOptions.filter((opt) => opt.value !== value);
-      saveSettings(state.categoryOptions, state.urgencyOptions, newStatus, state.tratativaOptions, state.roleOptions);
+      saveSettings(state.categoryOptions, state.urgencyOptions, newStatus, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { statusOptions: newStatus };
     });
@@ -227,14 +233,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const newStatus = state.statusOptions.map((opt) =>
         opt.value === value ? { ...opt, label: newLabel, value: newSlug, badge: newBadge } : opt
       );
-      saveSettings(state.categoryOptions, state.urgencyOptions, newStatus, state.tratativaOptions, state.roleOptions);
+      saveSettings(state.categoryOptions, state.urgencyOptions, newStatus, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { statusOptions: newStatus };
     });
   },
   reorderStatus: (newOrder) => {
     set((state) => {
-      saveSettings(state.categoryOptions, state.urgencyOptions, newOrder, state.tratativaOptions, state.roleOptions);
+      saveSettings(state.categoryOptions, state.urgencyOptions, newOrder, state.tratativaOptions, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { statusOptions: newOrder };
     });
@@ -247,7 +253,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
           throw new Error("Já existe uma tratativa com este slug.");
       }
       const newTratativas = [...state.tratativaOptions, tratativa];
-      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newTratativas, state.roleOptions);
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newTratativas, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { tratativaOptions: newTratativas };
     });
@@ -255,7 +261,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   removeTratativa: (id) => {
     set((state) => {
       const newTratativas = state.tratativaOptions.filter((opt) => opt.id !== id);
-      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newTratativas, state.roleOptions);
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newTratativas, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { tratativaOptions: newTratativas };
     });
@@ -269,14 +275,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const newTratativas = state.tratativaOptions.map((opt) =>
         opt.id === id ? { ...opt, title, type, slug } : opt
       );
-      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newTratativas, state.roleOptions);
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newTratativas, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { tratativaOptions: newTratativas };
     });
   },
   reorderTratativas: (newOrder) => {
     set((state) => {
-      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newOrder, state.roleOptions);
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, newOrder, state.roleOptions, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { tratativaOptions: newOrder };
     });
@@ -288,7 +294,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         throw new Error("Já existe um cargo com este slug.");
       }
       const newRoles = [...state.roleOptions, option];
-      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newRoles);
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newRoles, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { roleOptions: newRoles };
     });
@@ -296,7 +302,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   removeRole: (value) => {
     set((state) => {
       const newRoles = state.roleOptions.filter((opt) => opt.value !== value);
-      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newRoles);
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newRoles, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { roleOptions: newRoles };
     });
@@ -309,16 +315,56 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const newRoles = state.roleOptions.map((opt) =>
         opt.value === value ? { ...opt, label: newLabel, value: newSlug } : opt
       );
-      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newRoles);
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newRoles, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { roleOptions: newRoles };
     });
   },
   reorderRoles: (newOrder) => {
     set((state) => {
-      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newOrder);
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, newOrder, state.politicalSpectrumOptions);
       syncService.syncSettings().catch(console.error);
       return { roleOptions: newOrder };
+    });
+  },
+
+  addPoliticalSpectrum: (option) => {
+    set((state) => {
+      if (state.politicalSpectrumOptions.some(opt => opt.value === option.value)) {
+        throw new Error("Já existe um espectro político com este slug.");
+      }
+      const newOptions = [...state.politicalSpectrumOptions, option];
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions, newOptions);
+      syncService.syncSettings().catch(console.error);
+      return { politicalSpectrumOptions: newOptions };
+    });
+  },
+  removePoliticalSpectrum: (value) => {
+    set((state) => {
+      const newOptions = state.politicalSpectrumOptions.filter((opt) => opt.value !== value);
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions, newOptions);
+      syncService.syncSettings().catch(console.error);
+      return { politicalSpectrumOptions: newOptions };
+    });
+  },
+  updatePoliticalSpectrum: (value, newLabel, newSlug) => {
+    set((state) => {
+      if (value !== newSlug && state.politicalSpectrumOptions.some(opt => opt.value === newSlug)) {
+          throw new Error("Já existe um espectro político com este slug.");
+      }
+      const newOptions = state.politicalSpectrumOptions.map((opt) =>
+        opt.value === value ? { ...opt, label: newLabel, value: newSlug } : opt
+      );
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions, newOptions);
+      syncService.syncSettings().catch(console.error);
+      return { politicalSpectrumOptions: newOptions };
+    });
+  },
+  reorderPoliticalSpectrums: (newOrder) => {
+    set((state) => {
+      saveSettings(state.categoryOptions, state.urgencyOptions, state.statusOptions, state.tratativaOptions, state.roleOptions, newOrder);
+      syncService.syncSettings().catch(console.error);
+      return { politicalSpectrumOptions: newOrder };
     });
   },
 
@@ -335,6 +381,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       let urgencies = settings.urgencies || [];
       let tratativas = settings.tratativas || [];
       let roles = settings.roles || [];
+      let politicalSpectrums = settings.politicalSpectrums || [];
       let hasChanges = false;
 
       // Migration: Add slug to existing tratativas if missing
@@ -389,8 +436,17 @@ export const useAppStore = create<AppStore>((set, get) => ({
         hasChanges = true;
       }
 
+      if (politicalSpectrums.length === 0) {
+        politicalSpectrums = [
+            { value: "esquerda", label: "Esquerda" },
+            { value: "direita", label: "Direita" },
+            { value: "centro", label: "Centro" },
+        ];
+        hasChanges = true;
+      }
+
       if (hasChanges) {
-        await saveSettings(categories, urgencies, statusOptions, tratativas, roles);
+        await saveSettings(categories, urgencies, statusOptions, tratativas, roles, politicalSpectrums);
       }
 
       set({
@@ -399,6 +455,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         statusOptions: statusOptions,
         tratativaOptions: tratativas,
         roleOptions: roles,
+        politicalSpectrumOptions: politicalSpectrums,
       });
     } catch (error) {
       console.error("Failed to load settings:", error);

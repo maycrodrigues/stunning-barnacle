@@ -8,8 +8,9 @@ import { StatusSettings } from "../components/StatusSettings";
 import { LocationSettings } from "../components/LocationSettings";
 import { TratativaSettings } from "../components/TratativaSettings";
 import { RoleSettings } from "../components/RoleSettings";
+import { PoliticalSpectrumSettings } from "../components/PoliticalSpectrumSettings";
 
-type Tab = "categories" | "urgencies" | "status" | "location" | "tratativas" | "roles";
+type Tab = "categories" | "urgencies" | "status" | "location" | "tratativas" | "roles" | "political-spectrum";
 
 export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("categories");
@@ -108,6 +109,22 @@ export const SettingsPage: React.FC = () => {
             <Button
               variant="ghost"
               size="none"
+              onClick={() => setActiveTab("political-spectrum")}
+              className={`
+                rounded-none hover:bg-transparent justify-start gap-0
+                whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium
+                ${
+                  activeTab === "political-spectrum"
+                    ? "border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-300"
+                }
+              `}
+            >
+              Espectro Político
+            </Button>
+            <Button
+              variant="ghost"
+              size="none"
               onClick={() => setActiveTab("location")}
               className={`
                 rounded-none hover:bg-transparent justify-start gap-0
@@ -130,6 +147,7 @@ export const SettingsPage: React.FC = () => {
           {activeTab === "urgencies" && <UrgencySettings />}
           {activeTab === "status" && <StatusSettings />}
           {activeTab === "tratativas" && <TratativaSettings />}
+          {activeTab === "political-spectrum" && <PoliticalSpectrumSettings />}
           {activeTab === "location" && <LocationSettings />}
         </div>
       </div>

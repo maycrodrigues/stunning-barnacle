@@ -8,7 +8,10 @@ export const contactSchema = z.object({
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   phone: z.string().optional(),
   address: z.string().optional(),
+  neighborhood: z.string().optional(),
   notes: z.string().optional(),
+  isVoter: z.boolean().optional(),
+  politicalSpectrum: z.enum(["Left", "Right", "Center"]).optional(),
 });
 
 export type ContactFormData = z.infer<typeof contactSchema>;

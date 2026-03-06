@@ -84,6 +84,7 @@ interface GabineteDB extends DBSchema {
       status: Option[]; 
       tratativas?: Tratativa[]; 
       roles?: Option[];
+      politicalSpectrums?: Option[];
       updatedAt?: Date;
       synced?: number; // 0 = false, 1 = true
     };
@@ -134,7 +135,10 @@ export interface Contact {
   email?: string;
   phone?: string;
   address?: string;
+  neighborhood?: string;
   notes?: string;
+  isVoter?: boolean;
+  politicalSpectrum?: string;
   createdAt: Date;
   updatedAt: Date;
   active: boolean;
@@ -424,9 +428,9 @@ export const deleteAllDemands = async () => {
 // Settings operations
 const SETTINGS_ID = "global_settings";
 
-export const saveSettings = async (categories: Option[], urgencies: Option[], status: Option[], tratativas: Tratativa[] = [], roles: Option[] = [], tenantId: string = 'default-tenant') => {
+export const saveSettings = async (categories: Option[], urgencies: Option[], status: Option[], tratativas: Tratativa[] = [], roles: Option[] = [], politicalSpectrums: Option[] = [], tenantId: string = 'default-tenant') => {
   const db = await getDB();
-  await db.put("settings", { id: SETTINGS_ID, tenantId, categories, urgencies, status, tratativas, roles, updatedAt: new Date(), synced: 0 });
+  await db.put("settings", { id: SETTINGS_ID, tenantId, categories, urgencies, status, tratativas, roles, politicalSpectrums, updatedAt: new Date(), synced: 0 });
 };
 
 export const getSettings = async () => {
@@ -464,7 +468,7 @@ export const getSettings = async () => {
 
   const db = await getDB();
   const settings = await db.get("settings", SETTINGS_ID);
-  return settings || { id: SETTINGS_ID, tenantId: 'default-tenant', categories: [], urgencies: [], status: [], tratativas: [], roles: [], updatedAt: new Date(), synced: 1 };
+  return settings || { id: SETTINGS_ID, tenantId: 'default-tenant', categories: [], urgencies: [], status: [], tratativas: [], roles: [], politicalSpectrums: [], updatedAt: new Date(), synced: 1 };
 };
 
 // Contact operations

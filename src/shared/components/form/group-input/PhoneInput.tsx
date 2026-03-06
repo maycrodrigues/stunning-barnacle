@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { maskPhone } from "../../../utils/masks";
 
 interface CountryCode {
   code: string;
@@ -14,32 +15,69 @@ interface PhoneInputProps {
 
 const PhoneInput: React.FC<PhoneInputProps> = ({
   countries,
-  placeholder = "+1 (555) 000-0000",
+  placeholder = "(99) 99999-9999",
   onChange,
   selectPosition = "start", // Default position is 'start'
 }) => {
-  const [selectedCountry, setSelectedCountry] = useState<string>("US");
-  const [phoneNumber, setPhoneNumber] = useState<string>("+1");
+  const [selectedCountry, setSelectedCountry] = useState<string>("BR");
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
 
   const countryCodes: Record<string, string> = countries.reduce(
     (acc, { code, label }) => ({ ...acc, [code]: label }),
     {}
   );
 
+  // Initialize with BR if available, otherwise first country
+  useEffect(() => {
+    const initialCountry = countries.find(c => c.code === "BR")?.code || countries[0]?.code || "US";
+    setSelectedCountry(initialCountry);
+    const code = countryCodes[initialCountry] || "";
+    // Only set if phoneNumber is empty to avoid overwriting user input on re-renders if countries change
+    // But since we want to initialize, let's check if phoneNumber is empty
+    setPhoneNumber(prev => prev || (code ? `${code} ` : ""));
+  }, [countries]);
+
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newCountry = e.target.value;
     setSelectedCountry(newCountry);
-    setPhoneNumber(countryCodes[newCountry]);
+    const code = countryCodes[newCountry];
+    // Keep existing number if possible? For now, reset to code like original behavior but with space
+    const newPhone = code ? `${code} ` : "";
+    setPhoneNumber(newPhone);
     if (onChange) {
-      onChange(countryCodes[newCountry]);
+      onChange(newPhone);
     }
   };
 
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPhoneNumber = e.target.value;
-    setPhoneNumber(newPhoneNumber);
+    const inputValue = e.target.value;
+    const currentDDI = countryCodes[selectedCountry];
+
+    // Remove all non-digit characters
+    const rawDigits = inputValue.replace(/\D/g, "");
+    
+    // Get numeric DDI (remove +)
+    const numericDDI = currentDDI ? currentDDI.replace(/\D/g, "") : "";
+
+    let numberPart = rawDigits;
+
+    // Check if raw digits start with numeric DDI
+    // We only strip DDI if we have one and the input actually starts with it
+    // This prevents stripping "55" from a phone number "5599..." if the DDI wasn't actually part of the prefix logic
+    // But since we force the prefix in the display, it's safer to strip it if present at start
+    if (numericDDI && rawDigits.startsWith(numericDDI)) {
+      numberPart = rawDigits.substring(numericDDI.length);
+    }
+
+    // Apply mask to the number part
+    const maskedNumber = maskPhone(numberPart);
+    
+    // Reconstruct value with DDI
+    const finalValue = currentDDI ? `${currentDDI} ${maskedNumber}` : maskedNumber;
+
+    setPhoneNumber(finalValue);
     if (onChange) {
-      onChange(newPhoneNumber);
+      onChange(finalValue);
     }
   };
 

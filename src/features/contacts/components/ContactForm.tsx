@@ -4,10 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal } from "../../../shared/components/ui/modal";
 import Input from "../../../shared/components/form/input/InputField";
 import TextArea from "../../../shared/components/form/input/TextArea";
+import Checkbox from "../../../shared/components/form/input/Checkbox";
+import Select from "../../../shared/components/form/Select";
 import Label from "../../../shared/components/form/Label";
 import Button from "../../../shared/components/ui/button/Button";
 import { ContactFormData, contactSchema } from "../types";
 import { Contact } from "../../../shared/services/db";
+import { maskPhone } from "../../../shared/utils/masks";
+import { useAppStore } from "../../../shared/store/appStore";
 
 interface ContactFormProps {
   isOpen: boolean;
@@ -26,6 +30,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   initialValues,
   isLoading = false,
 }) => {
+  const { politicalSpectrumOptions } = useAppStore();
   const {
     control,
     handleSubmit,
@@ -38,7 +43,10 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       email: "",
       phone: "",
       address: "",
+      neighborhood: "",
       notes: "",
+      isVoter: false,
+      politicalSpectrum: undefined,
     },
   });
 
@@ -50,7 +58,10 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           email: initialData.email || "",
           phone: initialData.phone || "",
           address: initialData.address || "",
+          neighborhood: initialData.neighborhood || "",
           notes: initialData.notes || "",
+          isVoter: initialData.isVoter || false,
+          politicalSpectrum: initialData.politicalSpectrum,
         });
       } else if (initialValues) {
         reset({
@@ -58,7 +69,10 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           email: initialValues.email || "",
           phone: initialValues.phone || "",
           address: initialValues.address || "",
+          neighborhood: initialValues.neighborhood || "",
           notes: initialValues.notes || "",
+          isVoter: initialValues.isVoter || false,
+          politicalSpectrum: initialValues.politicalSpectrum,
         });
       } else {
         reset({
@@ -66,7 +80,10 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           email: "",
           phone: "",
           address: "",
+          neighborhood: "",
           notes: "",
+          isVoter: false,
+          politicalSpectrum: undefined,
         });
       }
     }
@@ -131,37 +148,94 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             <Controller
               name="phone"
               control={control}
-              render={({ field }) => (
+              render={({ field: { onChange, value, ...field } }) => (
                 <Input
                   {...field}
+                  value={maskPhone(value || "")}
+                  onChange={(e) => onChange(maskPhone(e.target.value))}
                   id="phone"
                   type="tel"
                   placeholder="(00) 00000-0000"
                   error={!!errors.phone}
                   hint={errors.phone?.message}
                   className="bg-white dark:bg-gray-800"
+                  maxLength={15}
                 />
               )}
             />
           </div>
         </div>
 
-        <div>
-          <Label htmlFor="address">Endereço</Label>
-          <Controller
-            name="address"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                id="address"
-                placeholder="Rua, Número, Bairro, Cidade - UF"
-                error={!!errors.address}
-                hint={errors.address?.message}
-                className="bg-white dark:bg-gray-800"
-              />
-            )}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+             <Label htmlFor="politicalSpectrum">Espectro Político</Label>
+             <Controller
+              name="politicalSpectrum"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  options={politicalSpectrumOptions}
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Selecione..."
+                  className="w-full"
+                />
+              )}
+            />
+          </div>
+          
+          <div className="flex items-center pt-6">
+            <Controller
+              name="isVoter"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  checked={field.value || false}
+                  onChange={field.onChange}
+                  label="É um eleitor?"
+                  id="isVoter"
+                />
+              )}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <Label htmlFor="address">Endereço</Label>
+            <Controller
+              name="address"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  id="address"
+                  placeholder="Rua, Número, Complemento"
+                  error={!!errors.address}
+                  hint={errors.address?.message}
+                  className="bg-white dark:bg-gray-800"
+                />
+              )}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="neighborhood">Bairro</Label>
+            <Controller
+              name="neighborhood"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  id="neighborhood"
+                  placeholder="Nome do Bairro"
+                  error={!!errors.neighborhood}
+                  hint={errors.neighborhood?.message}
+                  className="bg-white dark:bg-gray-800"
+                />
+              )}
+            />
+          </div>
         </div>
 
         <div>

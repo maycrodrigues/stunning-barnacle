@@ -6,6 +6,7 @@ import PhoneInput from "../group-input/PhoneInput";
 
 export default function InputGroup() {
   const countries = [
+    { code: "BR", label: "+55" },
     { code: "US", label: "+1" },
     { code: "GB", label: "+44" },
     { code: "CA", label: "+1" },
