@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { LayersControl, MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Demand, Option } from '../../../shared/store/appStore';
@@ -10,7 +10,7 @@ import { MapPin } from 'lucide-react';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-let DefaultIcon = L.icon({
+const DefaultIcon = L.icon({
     iconUrl: icon,
     shadowUrl: iconShadow,
     iconSize: [25, 41],
@@ -117,10 +117,20 @@ export const DashboardMap: React.FC<DashboardMapProps> = ({ demands, statusOptio
             className="h-full w-full"
             style={{ height: '100%', width: '100%', zIndex: 0 }}
         >
-            <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            <LayersControl position="topright">
+                <LayersControl.BaseLayer checked name="Satélite">
+                    <TileLayer
+                        attribution=""
+                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                    />
+                </LayersControl.BaseLayer>
+                <LayersControl.BaseLayer name="Mapa">
+                    <TileLayer
+                        attribution=""
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                </LayersControl.BaseLayer>
+            </LayersControl>
             
             {demandsWithLocation.map((demand) => {
                 const color = getStatusColor(demand.status || '', statusOptions);

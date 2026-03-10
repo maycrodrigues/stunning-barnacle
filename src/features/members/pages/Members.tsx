@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router";
 import PageBreadcrumb from "../../../shared/components/common/PageBreadCrumb";
 import PageMeta from "../../../shared/components/common/PageMeta";
 import Button from "../../../shared/components/ui/button/Button";
@@ -11,15 +12,37 @@ import { Member } from "../../../shared/services/db";
 import { generateFakeMembers } from "../utils/fakeMembers";
 
 export default function Members() {
-  const { loadMembers, isLoading: isLoadingMembers, addMember } = useMemberStore();
+  const { loadMembers, members, isLoading: isLoadingMembers, addMember } = useMemberStore();
   const { loadSettings } = useAppStore();
+  const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     loadMembers();
     loadSettings();
   }, [loadMembers, loadSettings]);
+
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get("q");
+    if (q) setSearchTerm(q);
+  }, [location.search]);
+
+  const filteredMembers = members.filter((member) => {
+    if (!searchTerm.trim()) return true;
+    const lower = searchTerm.toLowerCase();
+    return (
+      member.name.toLowerCase().includes(lower) ||
+      member.email?.toLowerCase().includes(lower) ||
+      member.phone.toLowerCase().includes(lower) ||
+      member.address?.toLowerCase().includes(lower) ||
+      member.social?.instagram?.toLowerCase().includes(lower) ||
+      member.social?.facebook?.toLowerCase().includes(lower) ||
+      member.social?.linkedin?.toLowerCase().includes(lower) ||
+      member.social?.x?.toLowerCase().includes(lower)
+    );
+  });
 
   const handleAddMember = () => {
     setEditingMember(null);
@@ -89,12 +112,22 @@ export default function Members() {
         </div>
       </div>
 
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Buscar membros..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full sm:max-w-md px-4 py-2.5 rounded-xl border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+        />
+      </div>
+
       {isLoadingMembers ? (
         <div className="flex h-40 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
         </div>
       ) : (
-        <MemberList onEdit={handleEditMember} />
+        <MemberList onEdit={handleEditMember} members={filteredMembers} />
       )}
 
       <MemberForm

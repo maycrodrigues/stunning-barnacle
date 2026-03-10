@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
+import { useLocation } from "react-router";
 import { useContactsStore } from "../store/contactsStore";
 import { ContactList } from "../components/ContactList";
 import { ContactForm } from "../components/ContactForm";
@@ -8,13 +9,20 @@ import { Contact } from "../../../shared/services/db";
 
 export const ContactsPage: React.FC = () => {
   const { contacts, isLoading, loadContacts, addContact, updateContact, deleteContact } = useContactsStore();
+  const location = useLocation();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>(undefined);
+  const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     loadContacts();
   }, [loadContacts]);
+
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get("q");
+    if (q) setSearchTerm(q);
+  }, [location.search]);
 
   const handleAdd = () => {
     setEditingContact(undefined);
@@ -33,16 +41,20 @@ export const ContactsPage: React.FC = () => {
   };
 
   const handleSubmit = async (data: ContactFormData) => {
+    setIsSaving(true);
     try {
       if (editingContact) {
         await updateContact(editingContact.id, data);
       } else {
         await addContact(data);
       }
+      setEditingContact(undefined);
       setIsFormOpen(false);
     } catch (error) {
       console.error("Error saving contact:", error);
       alert("Ocorreu um erro ao salvar o contato.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -99,7 +111,7 @@ export const ContactsPage: React.FC = () => {
         onClose={() => setIsFormOpen(false)}
         onSubmit={handleSubmit}
         initialData={editingContact}
-        isLoading={isLoading}
+        isLoading={isSaving}
       />
     </div>
   );

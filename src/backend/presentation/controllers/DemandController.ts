@@ -24,12 +24,13 @@ export class DemandController {
 
   getById = async (req: Request, res: Response) => {
     try {
-      const demand = await this.getDemandById.execute(req.params.id);
+      const demandId = String(req.params.id);
+      const demand = await this.getDemandById.execute(demandId);
       if (!demand) {
-        logger.demand('Demand not found', { demandId: req.params.id });
+        logger.demand('Demand not found', { demandId });
         return res.status(404).json({ error: 'Demand not found' });
       }
-      logger.demand('Fetched demand details', { demandId: req.params.id });
+      logger.demand('Fetched demand details', { demandId });
       res.json(demand);
     } catch (error) {
       logger.error('Error fetching demand', { context: 'DEMAND', error, demandId: req.params.id });
@@ -38,15 +39,14 @@ export class DemandController {
   };
 
   save = async (req: Request, res: Response) => {
+    const demand = req.body;
     try {
-      const demand = req.body;
       const result = await this.saveDemand.execute(demand);
-      
       const isUpdate = demand.createdAt && demand.updatedAt && demand.createdAt !== demand.updatedAt; // Heuristic, original code compared timestamps from result which is safer but let's trust the logic
       // Actually original logic was: result?.createdAt === result?.updatedAt ? 'created' : 'updated'
-      // But we return the result.
-      
-      logger.demand('Demand synced', { id: demand.id });
+      // But we return the result.operation to be more explicit.
+      const operation = isUpdate ? 'updated' : 'created';
+      logger.demand('Demand synced', { demandId: demand.id, operation });
       res.json(result);
     } catch (error) {
       logger.error('Error syncing demand', { context: 'DEMAND', error, body: req.body });

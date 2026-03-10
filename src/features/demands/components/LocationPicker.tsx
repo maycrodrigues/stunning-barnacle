@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { LayersControl, MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import { useEffect, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -99,10 +99,20 @@ export const LocationPicker = ({ value, onChange, className }: LocationPickerPro
         scrollWheelZoom={true}
         className="h-full w-full z-0" // z-0 to avoid overlapping modal
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <LayersControl position="topright">
+          <LayersControl.BaseLayer checked name="Satélite">
+            <TileLayer
+              attribution=""
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            />
+          </LayersControl.BaseLayer>
+          <LayersControl.BaseLayer name="Mapa">
+            <TileLayer
+              attribution=""
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+          </LayersControl.BaseLayer>
+        </LayersControl>
         <MapResizer />
         <LocationMarker position={position} setPosition={handleSetPosition} />
         <MapCenterController center={initialCenter} />

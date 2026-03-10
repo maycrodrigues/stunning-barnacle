@@ -2,6 +2,16 @@ import { getDB } from './db';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
+const reviveDate = (value: unknown): Date => new Date(value as string | number | Date);
+
+const mergePreferRemoteDefined = <T extends object>(local: T, remote: Partial<T>): T => {
+  const merged: Record<string, unknown> = { ...(local as Record<string, unknown>) };
+  for (const [key, value] of Object.entries(remote as Record<string, unknown>)) {
+    if (value !== undefined) merged[key] = value;
+  }
+  return merged as T;
+};
+
 export const syncService = {
   async syncDemands() {
     const db = await getDB();
@@ -61,15 +71,22 @@ export const syncService = {
             createdAt: new Date(serverDemand.createdAt),
             updatedAt: new Date(serverDemand.updatedAt),
             deadline: serverDemand.deadline ? new Date(serverDemand.deadline) : undefined,
-            statusHistory: serverDemand.statusHistory?.map((h: any) => ({
-              ...h,
-              startDate: new Date(h.startDate),
-              endDate: h.endDate ? new Date(h.endDate) : undefined
-            })),
-            timeline: serverDemand.timeline?.map((t: any) => ({
-              ...t,
-              date: new Date(t.date)
-            })),
+            statusHistory: Array.isArray(serverDemand.statusHistory)
+              ? serverDemand.statusHistory.map((h: unknown) => {
+                  const entry = h as Record<string, unknown>;
+                  return {
+                    ...entry,
+                    startDate: reviveDate(entry.startDate),
+                    endDate: entry.endDate ? reviveDate(entry.endDate) : undefined,
+                  };
+                })
+              : undefined,
+            timeline: Array.isArray(serverDemand.timeline)
+              ? serverDemand.timeline.map((t: unknown) => {
+                  const entry = t as Record<string, unknown>;
+                  return { ...entry, date: reviveDate(entry.date) };
+                })
+              : undefined,
             synced: 1 // Mark as synced since it came from server
           };
 
@@ -159,7 +176,8 @@ export const syncService = {
             await store.put(revivedContact);
             pulledCount++;
           } else if (localContact.synced === 1) {
-            await store.put(revivedContact);
+            const mergedContact = mergePreferRemoteDefined(localContact, revivedContact);
+            await store.put(mergedContact);
             pulledCount++;
           } else {
             console.warn(`[Sync] Skipping update for contact ${serverContact.id} due to local unsynced changes.`);

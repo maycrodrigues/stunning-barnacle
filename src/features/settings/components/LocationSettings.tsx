@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAppStore } from "../../../shared/store/appStore";
 import Swal from "sweetalert2";
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { LayersControl, MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -183,10 +183,20 @@ export const LocationSettings: React.FC = () => {
             scrollWheelZoom={true}
             className="h-full w-full z-0"
             >
-            <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            <LayersControl position="topright">
+              <LayersControl.BaseLayer checked name="Satélite">
+                <TileLayer
+                  attribution=""
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                />
+              </LayersControl.BaseLayer>
+              <LayersControl.BaseLayer name="Mapa">
+                <TileLayer
+                  attribution=""
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+              </LayersControl.BaseLayer>
+            </LayersControl>
             <MapResizer />
             <MapEvents onMoveEnd={handleMapMove} />
             <Marker position={[parseFloat(lat) || defaultLocation.lat, parseFloat(lng) || defaultLocation.lng]} />

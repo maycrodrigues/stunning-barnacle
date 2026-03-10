@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import { Contact, saveContact, updateContact, deleteContact, getAllContacts } from "../../../shared/services/db";
+import {
+  Contact,
+  saveContact as saveContactInDb,
+  updateContact as updateContactInDb,
+  deleteContact as deleteContactInDb,
+  getAllContacts,
+} from "../../../shared/services/db";
 import { syncService } from "../../../shared/services/sync";
 import { ContactFormData } from "../types";
 
@@ -33,12 +39,17 @@ export const useContactsStore = create<ContactsStore>((set) => ({
   addContact: async (data: ContactFormData) => {
     set({ isLoading: true, error: null });
     try {
-      const newContact = await saveContact(data);
+      const newContact = await saveContactInDb(data);
+      
       set((state) => ({ 
         contacts: [newContact, ...state.contacts],
         isLoading: false 
       }));
-      syncService.syncContacts().catch(console.error);
+
+      syncService.syncContacts().catch(err => {
+        console.error("Background sync failed:", err);
+      });
+      
       return newContact;
     } catch (error) {
       console.error("Failed to add contact:", error);
@@ -50,12 +61,16 @@ export const useContactsStore = create<ContactsStore>((set) => ({
   updateContact: async (id: string, data: Partial<ContactFormData>) => {
     set({ isLoading: true, error: null });
     try {
-      const updated = await updateContact(id, data);
+      const updated = await updateContactInDb(id, data);
+      
       set((state) => ({
         contacts: state.contacts.map((c) => (c.id === id ? updated : c)),
         isLoading: false,
       }));
-      syncService.syncContacts().catch(console.error);
+
+      syncService.syncContacts().catch(err => {
+        console.error("Background sync failed:", err);
+      });
     } catch (error) {
       console.error("Failed to update contact:", error);
       set({ error: "Falha ao atualizar contato", isLoading: false });
@@ -66,7 +81,7 @@ export const useContactsStore = create<ContactsStore>((set) => ({
   deleteContact: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      await deleteContact(id);
+      await deleteContactInDb(id);
       set((state) => ({
         contacts: state.contacts.filter((c) => c.id !== id),
         isLoading: false,

@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 interface DashboardFilterProps {
   categories: Option[];
   statusOptions: Option[];
+  neighborhoodOptions: Option[];
   onFilterChange: (filters: DashboardFilters) => void;
   filters: DashboardFilters;
 }
@@ -16,11 +17,13 @@ export interface DashboardFilters {
   endDate: Date | null;
   status: string;
   category: string;
+  neighborhood: string;
 }
 
 export const DashboardFilter: React.FC<DashboardFilterProps> = ({
   categories,
   statusOptions,
+  neighborhoodOptions,
   onFilterChange,
   filters,
 }) => {
@@ -48,14 +51,19 @@ export const DashboardFilter: React.FC<DashboardFilterProps> = ({
     }
   };
 
-  const hasActiveFilters = filters.startDate || filters.status !== "all" || filters.category !== "all";
+  const hasActiveFilters =
+    Boolean(filters.startDate || filters.endDate) ||
+    filters.status !== "all" ||
+    filters.category !== "all" ||
+    filters.neighborhood !== "all";
 
   const clearFilters = () => {
     onFilterChange({
       startDate: null,
       endDate: null,
       status: "all",
-      category: "all"
+      category: "all",
+      neighborhood: "all",
     });
     // Hack to clear flatpickr instance if needed, but react key or passing value helps
     // Since DatePicker uses flatpickr imperatively, we might need to force a re-render or pass value prop if supported
@@ -99,6 +107,16 @@ export const DashboardFilter: React.FC<DashboardFilterProps> = ({
             options={[{ value: "all", label: "Todas" }, ...categories]}
             onChange={(value) => onFilterChange({ ...filters, category: value })}
             value={filters.category}
+          />
+        </div>
+
+        <div className="flex-1">
+          <Select
+            label="Bairro"
+            placeholder="Todos os bairros"
+            options={[{ value: "all", label: "Todos" }, ...neighborhoodOptions]}
+            onChange={(value) => onFilterChange({ ...filters, neighborhood: value })}
+            value={filters.neighborhood}
           />
         </div>
 

@@ -16,11 +16,13 @@ import Swal from "sweetalert2";
 
 interface MemberListProps {
   onEdit: (member: Member) => void;
+  members?: Member[];
 }
 
-export const MemberList: React.FC<MemberListProps> = ({ onEdit }) => {
-  const { members, removeMember } = useMemberStore();
+export const MemberList: React.FC<MemberListProps> = ({ onEdit, members: membersProp }) => {
+  const { members: storeMembers, removeMember } = useMemberStore();
   const { roleOptions } = useAppStore();
+  const members = membersProp ?? storeMembers;
 
   const handleDelete = async (member: Member) => {
     const result = await Swal.fire({
@@ -38,7 +40,7 @@ export const MemberList: React.FC<MemberListProps> = ({ onEdit }) => {
       try {
         await removeMember(member.id);
         Swal.fire("Excluído!", "O membro foi removido.", "success");
-      } catch (error) {
+      } catch {
         Swal.fire("Erro!", "Erro ao excluir membro.", "error");
       }
     }

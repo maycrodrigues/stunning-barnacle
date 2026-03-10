@@ -537,8 +537,16 @@ export const getAllContacts = async (): Promise<Contact[]> => {
         const localContact = await store.get(serverContact.id);
         
         // Only update if local doesn't exist or is already synced (no local changes)
-        if (!localContact || localContact.synced === 1) {
+        if (!localContact) {
           await store.put(revivedContact);
+        } else if (localContact.synced === 1) {
+          const mergedContact: Record<string, unknown> = {
+            ...(localContact as unknown as Record<string, unknown>),
+          };
+          for (const [key, value] of Object.entries(revivedContact as Record<string, unknown>)) {
+            if (value !== undefined) mergedContact[key] = value;
+          }
+          await store.put(mergedContact as unknown as Contact);
         }
       }
 
@@ -580,8 +588,16 @@ export const getContactById = async (id: string): Promise<Contact | undefined> =
       };
 
       const localContact = await store.get(id);
-      if (!localContact || localContact.synced === 1) {
-         await store.put(revivedContact);
+      if (!localContact) {
+        await store.put(revivedContact);
+      } else if (localContact.synced === 1) {
+        const mergedContact: Record<string, unknown> = {
+          ...(localContact as unknown as Record<string, unknown>),
+        };
+        for (const [key, value] of Object.entries(revivedContact as Record<string, unknown>)) {
+          if (value !== undefined) mergedContact[key] = value;
+        }
+        await store.put(mergedContact as unknown as Contact);
       }
       await tx.done;
     }
