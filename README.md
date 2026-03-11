@@ -1,197 +1,119 @@
-# TailAdmin React - Free React Tailwind Admin Dashboard Template
+# Gabinete Online v2
 
-TailAdmin is a free and open-source admin dashboard template built on **React and Tailwind CSS**, providing developers
-with everything they need to create a comprehensive, data-driven back-end,
-dashboard, or admin panel solution for upcoming web projects.
+Aplicação SaaS (frontend) para gestão de demandas de um gabinete, com foco em **offline-first** (IndexedDB como fonte local) e sincronização com uma **API REST externa**.
 
-With TailAdmin, you get access to all the necessary dashboard UI components, elements, and pages required to build a
-feature-rich and complete dashboard or admin panel. Whether you're building dashboard or admin panel for a complex web
-application or a simple website, TailAdmin is the perfect solution to help you get up and running quickly.
+## Stack
 
-![TailAdmin React.js Dashboard Preview](./banner.png)
+- Frontend: Vite + React + TypeScript + Tailwind CSS
+- Estado: Zustand
+- Persistência local: IndexedDB (via `idb`)
+- Validação: Zod + React Hook Form
+- UI/UX: SweetAlert2, Lucide Icons, Swiper
+- Gráficos/Mapa: ApexCharts, React Leaflet, JVectorMap
 
-## Overview
+## Principais módulos
 
-TailAdmin provides essential UI components and layouts for building feature-rich, data-driven admin dashboards and
-control panels. It's built on:
+- Dashboard: métricas, gráficos e mapa demográfico
+- Demandas: listagem, criação, edição, detalhes, Kanban, timeline e tratativas
+- Contatos: cadastro e filtros (inclui espectro político)
+- Membros: cadastro e papéis (roles)
+- Configurações: categorias, urgências, status, tratativas, roles, espectro político e localização
 
-- React 19
-- TypeScript
-- Tailwind CSS v4
+## Arquitetura do repositório
 
-### Quick Links
-
-- [✨ Visit Website](https://tailadmin.com)
-- [📄 Documentation](https://tailadmin.com/docs)
-- [⬇️ Download](https://tailadmin.com/download)
-- [🖌️ Figma Design File (Community Edition)](https://www.figma.com/community/file/1214477970819985778)
-- [⚡ Get PRO Version](https://tailadmin.com/pricing)
-
-### Demos
-
-- [Free Version](https://free-react-demo.tailadmin.com/)
-- [Pro Version](https://react-demo.tailadmin.com)
-
-### Other Versions
-
-- [HTML Version](https://github.com/TailAdmin/tailadmin-free-tailwind-dashboard-template)
-- [Next.js Version](https://github.com/TailAdmin/free-nextjs-admin-dashboard)
-- [Vue.js Version](https://github.com/TailAdmin/vue-tailwind-admin-dashboard)
-- [Angular Version](https://github.com/TailAdmin/free-angular-tailwind-dashboard)
-- [Laravel Version](https://github.com/TailAdmin/tailadmin-laravel)
-
-## Installation
-
-### Prerequisites
-
-To get started with TailAdmin, ensure you have the following prerequisites installed and set up:
-
-- Node.js 18.x or later (recommended to use Node.js 20.x or later)
-
-### Cloning the Repository
-
-Clone the repository using the following command:
-
-```bash
-git clone https://github.com/TailAdmin/free-react-tailwind-admin-dashboard.git
+```
+src/
+├── features/           # módulos por domínio (demands, contacts, members, settings, dashboard)
+├── shared/             # componentes, layout, hooks, store, utils e serviços compartilhados
 ```
 
-> Windows Users: place the repository near the root of your drive if you face issues while cloning.
+## Offline-first e sincronização
 
-1. Install dependencies:
+O frontend usa o IndexedDB como base local (para funcionar mesmo sem internet) e sincroniza com a API quando possível.
 
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
+- IndexedDB: schema/upgrade e operações em [db.ts](file:///Users/maycrodrigues/Desktop/labs/gabinete-online-v2/src/shared/services/db.ts)
+  - Stores principais: `demands`, `contacts`, `members`, `settings`
+  - Itens possuem flag `synced` para controlar pendências de envio
+- Sync: fila simples de pendências e push para API em [sync.ts](file:///Users/maycrodrigues/Desktop/labs/gabinete-online-v2/src/shared/services/sync.ts)
+  - Envia itens não sincronizados e marca como sincronizado quando confirmado
 
-2. Start the development server:
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
+## API
 
-## Components
+A API foi migrada para outro repositório. Este projeto assume uma API REST com base `/api/v1` (ajustável via `VITE_API_URL`), com endpoints esperados:
 
-TailAdmin is a pre-designed starting point for building a web-based dashboard using React.js and Tailwind CSS. The
-template includes:
+- `GET /demands`, `GET /demands/:id`, `POST /demands`
+- `GET /members`, `POST /members`
+- `GET /contacts`, `POST /contacts`
+- `GET /settings`, `POST /settings`
 
-- Sophisticated and accessible sidebar
-- Data visualization components
-- Prebuilt profile management and 404 page
-- Tables and Charts(Line and Bar)
-- Authentication forms and input elements
-- Alerts, Dropdowns, Modals, Buttons and more
-- FAQ & Accordion, Testimonials, and Carousels
-- Can't forget Dark Mode 🕶️
+## Variáveis de ambiente
 
-All components are built with React and styled using Tailwind CSS for easy customization.
+### Frontend (Vite)
 
-## Feature Comparison
+- `VITE_API_URL` (obrigatória em produção): base da API (ex.: `https://sua-api.dominio.com/api/v1`)
 
-### Free Version
+Exemplo: [.env.example](file:///Users/maycrodrigues/Desktop/labs/gabinete-online-v2/.env.example)
 
-- 1 Unique Dashboard
-- 35+ dashboard components
-- 50+ UI elements
-- Basic Figma design files
-- Community support
+## Como rodar localmente
 
-### Pro Version
+### 1) Instalar dependências
 
-- 7 Unique Dashboards: Analytics, Ecommerce, Marketing, CRM, SaaS, Stocks, Logistics (more coming soon)
-- 500+ dashboard components and UI elements
-- Complete Figma design file
-- Email support
+```bash
+npm ci
+```
 
-To learn more about pro version features and pricing, visit our [pricing page](https://tailadmin.com/pricing).
+### 2) Subir o frontend
 
-## Changelog
+Em outro terminal:
 
-### Version 2.1.0 - [Dec 30, 2025]
+```bash
+npm run dev
+```
 
-- Resolved Date Picker positioning and input issues in Charts.
+Opcionalmente, defina `VITE_API_URL` em `.env.local` para apontar para a API desejada.
 
-### Version 2.0.2 - [March 25, 2025]
+## Debug / auditoria (Status do sistema)
 
-- Upgraded to React 19
-- Included overrides for packages to prevent peer dependency errors.
-- Migrated from react-flatpickr to flatpickr package for React 19 support
+Existe uma modal de status e auditoria de logs, acessível ao clicar **5x no logo**.
 
-### Version 2.0.1 - [February 27, 2025]
+- Mostra status do app, base URL, pendências de sync e status de conexão com API
+- Captura logs do console e erros globais (para auditoria) em [systemStatusStore.ts](file:///Users/maycrodrigues/Desktop/labs/gabinete-online-v2/src/shared/store/systemStatusStore.ts)
+- UI da modal em [SystemStatusModal.tsx](file:///Users/maycrodrigues/Desktop/labs/gabinete-online-v2/src/shared/components/system/SystemStatusModal.tsx)
 
-#### Update Overview
+## Scripts
 
-- Upgraded to Tailwind CSS v4 for better performance and efficiency.
-- Updated class usage to match the latest syntax and features.
-- Replaced deprecated class and optimized styles.
+Definidos em [package.json](file:///Users/maycrodrigues/Desktop/labs/gabinete-online-v2/package.json):
 
-#### Next Steps
+- `npm run dev`: inicia o Vite
+- `npm run build`: typecheck (`tsc -b`) + build do Vite
+- `npm run preview`: preview do build
+- `npm run lint`: ESLint
 
-- Run npm install or yarn install to update dependencies.
-- Check for any style changes or compatibility issues.
-- Refer to the Tailwind CSS v4 [Migration Guide](https://tailwindcss.com/docs/upgrade-guide) on this release. if needed.
-- This update keeps the project up to date with the latest Tailwind improvements. 🚀
+## Deploy e workflow (GitHub Pages + Release)
 
-### Version 2.0.0 - [February 2025]
+Workflow único em [deploy-pages.yml](file:///Users/maycrodrigues/Desktop/labs/gabinete-online-v2/.github/workflows/deploy-pages.yml):
 
-A major update with comprehensive redesign and modern React patterns implementation.
+- Dispara em `push` na branch `main` (e manualmente via `workflow_dispatch`)
+- Build do Vite com:
+  - `GITHUB_PAGES=true` (configura `base` no [vite.config.ts](file:///Users/maycrodrigues/Desktop/labs/gabinete-online-v2/vite.config.ts))
+  - `VITE_API_URL` via variável do repositório (Actions Variables)
+- Publica o artefato em GitHub Pages
+- Cria uma **Release** após o deploy
+  - Tag: `release-${GITHUB_RUN_NUMBER}`
+  - Notas: tenta coletar commits desde a última tag `release-*` e inclui apenas mensagens no padrão:
+    - `feat: ...`, `fix: ...`, `perf: ...`, `refactor: ...` (inclui variantes com escopo: `feat(demands): ...`)
+  - Se não houver commits “relevantes”, usa um texto padrão
 
-#### Major Improvements
+### Configuração obrigatória no repositório (Pages)
 
-- Complete UI redesign with modern React patterns
-- New features: collapsible sidebar, chat, and calendar
-- Improved performance and accessibility
-- Updated data visualization using ApexCharts
+Em `Settings → Secrets and variables → Actions → Variables`, crie:
 
-#### Key Features
+- `VITE_API_URL` = URL pública da sua API (ex.: `https://sua-api.dominio.com/api/v1`)
 
-- Redesigned dashboards (Ecommerce, Analytics, Marketing, CRM)
-- Enhanced navigation with React Router integration
-- Advanced tables with sorting and filtering
-- Calendar with drag-and-drop support
-- New UI components and improved existing ones
+### Node.js 24 no GitHub Actions
 
-#### Breaking Changes
+O workflow está com opt-in para execução de actions em Node 24:
 
-- Updated sidebar component API
-- Migrated charts to ApexCharts
-- Revised authentication system
+- `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`
 
-[Read more](https://tailadmin.com/docs/update-logs/react) on this release.
-
-### Version 1.3.7 - [June 20, 2024]
-
-#### Enhancements
-
-1. Remove Repetition of DefaultLayout in every Pages
-2. Add ClickOutside Component for reduce repeated functionality in Header Message, Notification and User Dropdowns.
-
-### Version 1.3.6 - [Jan 31, 2024]
-
-#### Enhancements
-
-1. Integrate flatpickr in [Date Picker/Form Elements]
-2. Change color after select an option [Select Element/Form Elements].
-3. Make it functional [Multiselect Dropdown/Form Elements].
-4. Make best value editable [Pricing Table One/Pricing Table].
-5. Rearrange Folder structure.
-
-### Version 1.2.0 - [Apr 28, 2023]
-
-- Add Typescript in TailAdmin React.
-
-### Version 1.0.0 - Initial Release - [Mar 13, 2023]
-
-- Initial release of TailAdmin React.
-
-## License
-
-TailAdmin React.js Free Version is released under the MIT License.
-
-## Support
-
-If you find this project helpful, please consider giving it a star on GitHub. Your support helps us continue developing
-and maintaining this template.
+Isso antecipa a mudança de runtime anunciada pelo GitHub.

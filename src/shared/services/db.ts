@@ -2,7 +2,12 @@ import { openDB, DBSchema, IDBPDatabase } from "idb";
 import { ulid } from "ulid";
 import { DemandFormData } from "../../features/demands/types";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+const apiUrlFromEnv = (import.meta.env.VITE_API_URL ?? "").trim();
+const API_URL = apiUrlFromEnv
+  ? apiUrlFromEnv
+  : import.meta.env.DEV
+    ? "http://localhost:3000/api/v1"
+    : `${window.location.origin}/api/v1`;
 
 export interface Option {
   value: string;
