@@ -20,7 +20,7 @@ const ContactsPage = lazy(() => import("./features/contacts/pages/ContactsPage")
 export default function App() {
   return (
     <>
-      <Router>
+      <Router basename={import.meta.env.BASE_URL}>
         <ScrollToTop />
         <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader /></div>}>
           <Routes>
