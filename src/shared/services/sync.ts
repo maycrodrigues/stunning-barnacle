@@ -5,7 +5,7 @@ const API_URL = apiUrlFromEnv
   ? apiUrlFromEnv
   : import.meta.env.DEV
     ? 'http://localhost:3000/api/v1'
-    : `${window.location.origin}/api/v1`;
+    : new URL('api/v1', new URL(import.meta.env.BASE_URL || '/', window.location.origin)).toString().replace(/\/$/, '');
 
 const reviveDate = (value: unknown): Date => new Date(value as string | number | Date);
 
