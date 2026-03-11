@@ -5,6 +5,7 @@ import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
 import { useAppStore } from "../store/appStore";
+import { SystemStatusModal } from "../components/system/SystemStatusModal";
 
 const LayoutContent: React.FC = () => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
@@ -31,6 +32,7 @@ const LayoutContent: React.FC = () => {
         <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
           <Outlet />
         </div>
+        <SystemStatusModal />
       </div>
     </div>
   );

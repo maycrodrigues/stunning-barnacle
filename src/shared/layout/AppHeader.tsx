@@ -5,11 +5,13 @@ import { useSidebar } from "../context/SidebarContext";
 import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
 import { SyncButton } from "../components/header/SyncButton";
 import { DemandSearch } from "../../features/demands/components/DemandSearch";
+import { useLogoSystemStatus } from "../hooks/useLogoSystemStatus";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { onLogoClick } = useLogoSystemStatus();
 
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {
@@ -66,7 +68,7 @@ const AppHeader: React.FC = () => {
             {/* Cross Icon */}
           </button>
 
-          <Link to="/" className="lg:hidden">
+          <Link to="/" className="lg:hidden" onClick={onLogoClick}>
             <img
               className="dark:hidden"
               src="./images/logo/logo.svg"

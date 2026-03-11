@@ -12,6 +12,7 @@ import {
   EnvelopeIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
+import { useLogoSystemStatus } from "../hooks/useLogoSystemStatus";
 
 type NavItem = {
   name: string;
@@ -56,6 +57,7 @@ const othersItems: NavItem[] = [];
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
+  const { onLogoClick } = useLogoSystemStatus();
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main" | "others";
@@ -264,7 +266,7 @@ const AppSidebar: React.FC = () => {
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link to="/">
+        <Link to="/" onClick={onLogoClick}>
           {isExpanded || isHovered || isMobileOpen ? (
             <>
               <img

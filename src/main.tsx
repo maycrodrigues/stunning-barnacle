@@ -6,6 +6,9 @@ import "flatpickr/dist/flatpickr.css";
 import App from "./App.tsx";
 import { AppWrapper } from "./shared/components/common/PageMeta.tsx";
 import { ThemeProvider } from "./shared/context/ThemeContext.tsx";
+import { initClientAuditLogging } from "./shared/store/systemStatusStore.ts";
+
+initClientAuditLogging();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
