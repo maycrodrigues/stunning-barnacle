@@ -48,12 +48,7 @@ const navItems: NavItem[] = [
     icon: <BoxCubeIcon />,
     name: "Configurações",
     path: "/settings",
-  },
-  {
-    icon: <GridIcon />,
-    name: "Old Home",
-    path: "/old-home",
-  },
+  }
 ];
 
 const othersItems: NavItem[] = [];

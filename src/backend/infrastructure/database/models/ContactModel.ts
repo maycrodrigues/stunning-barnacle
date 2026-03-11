@@ -9,7 +9,10 @@ const ContactSchema = new Schema<Contact>({
   email: String,
   phone: String,
   address: String,
+  neighborhood: String,
   notes: String,
+  isVoter: Boolean,
+  politicalSpectrum: { type: String, enum: ["Left", "Right", "Center"] },
   active: { type: Boolean, required: true, default: true },
 
   createdAt: { type: Date, required: true, default: Date.now },

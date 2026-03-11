@@ -9,10 +9,9 @@ import { MemberForm } from "../components/MemberForm";
 import { useMemberStore } from "../store/memberStore";
 import { useAppStore } from "../../../shared/store/appStore";
 import { Member } from "../../../shared/services/db";
-import { generateFakeMembers } from "../utils/fakeMembers";
 
 export default function Members() {
-  const { loadMembers, members, isLoading: isLoadingMembers, addMember } = useMemberStore();
+  const { loadMembers, members, isLoading: isLoadingMembers } = useMemberStore();
   const { loadSettings } = useAppStore();
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,26 +58,6 @@ export default function Members() {
     setEditingMember(null);
   };
 
-  const handleGenerateFakes = async () => {
-    if (!window.confirm("Deseja gerar 5 membros falsos para teste?")) return;
-    
-    try {
-      const fakes = generateFakeMembers(5);
-      // Create promises to add members in parallel (or sequential if needed)
-      // Using sequential to avoid overwhelming the store/db logic if not robust enough
-      for (const fake of fakes) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, createdAt, updatedAt, tenantId, ...data } = fake;
-        // The store's addMember will handle ID and timestamps
-        await addMember(data);
-      }
-      alert("5 membros gerados com sucesso!");
-    } catch (error) {
-      console.error("Erro ao gerar membros falsos:", error);
-      alert("Erro ao gerar membros. Verifique o console.");
-    }
-  };
-
   return (
     <div>
       <PageMeta
@@ -92,15 +71,6 @@ export default function Members() {
           Membros da Equipe
         </h2>
         <div className="flex gap-2">
-          {import.meta.env.DEV && (
-            <Button
-              variant="outline"
-              onClick={handleGenerateFakes}
-              className="flex items-center gap-2"
-            >
-              Gerar Fakes
-            </Button>
-          )}
           <Button
             variant="primary"
             onClick={handleAddMember}

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { ulid } from "ulid";
 import { DemandFormData } from "../../features/demands/types";
-import { saveDemand, getAllDemands, saveSettings, getSettings, updateDemand, deleteDemand, deleteAllDemands, StatusHistoryEntry, TimelineEvent, Tratativa, DemandTratativa } from "../services/db";
+import { saveDemand, getAllDemands, saveSettings, getSettings, updateDemand, deleteDemand, StatusHistoryEntry, TimelineEvent, Tratativa, DemandTratativa } from "../services/db";
 import { syncService } from "../services/sync";
 import { generateSlug } from "../utils/stringUtils";
 import { useMemberStore } from "../../features/members/store/memberStore";
@@ -74,7 +74,6 @@ interface AppStore {
   addDemand: (demand: DemandFormData) => Promise<void>;
   updateDemand: (id: string, demand: Partial<Demand>, justification?: string, attachment?: { type: 'image' | 'pdf', url: string, name: string }) => Promise<void>;
   removeDemand: (id: string) => Promise<void>;
-  clearDemands: () => Promise<void>;
   loadDemands: () => Promise<void>;
   isLoadingDemands: boolean;
 }
@@ -767,15 +766,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       syncService.syncDemands().catch(console.error);
     } catch (error) {
       console.error("Failed to delete demand:", error);
-      throw error;
-    }
-  },
-  clearDemands: async () => {
-    try {
-      await deleteAllDemands();
-      set({ demands: [] });
-    } catch (error) {
-      console.error("Failed to clear demands:", error);
       throw error;
     }
   },
