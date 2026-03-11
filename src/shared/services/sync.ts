@@ -1,6 +1,11 @@
 import { getDB } from './db';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+const apiUrlFromEnv = (import.meta.env.VITE_API_URL ?? '').trim();
+const API_URL = apiUrlFromEnv
+  ? apiUrlFromEnv
+  : import.meta.env.DEV
+    ? 'http://localhost:3000/api/v1'
+    : `${window.location.origin}/api/v1`;
 
 const reviveDate = (value: unknown): Date => new Date(value as string | number | Date);
 

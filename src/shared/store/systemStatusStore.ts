@@ -30,7 +30,12 @@ type SystemStatusStore = {
   checkApi: (options?: { timeoutMs?: number }) => Promise<void>;
 };
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
+const apiUrlFromEnv = (import.meta.env.VITE_API_URL ?? "").trim();
+const API_URL = apiUrlFromEnv
+  ? apiUrlFromEnv
+  : import.meta.env.DEV
+    ? "http://localhost:3000/api/v1"
+    : `${window.location.origin}/api/v1`;
 const LOGS_MAX = 2000;
 
 const formatMessage = (args: unknown[]): string => {
