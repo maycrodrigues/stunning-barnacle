@@ -23,7 +23,7 @@ export const SystemStatusModal: FC = () => {
   const logs = useSystemStatusStore((s) => s.logs);
   const clearLogs = useSystemStatusStore((s) => s.clearLogs);
   const api = useSystemStatusStore((s) => s.api);
-  const checkApi = useSystemStatusStore((s) => s.checkApi);
+  const startApiValidation = useSystemStatusStore((s) => s.startApiValidation);
 
   const isOffline = useOfflineStatus();
   const [unsyncedCount, setUnsyncedCount] = useState<number | null>(null);
@@ -33,10 +33,10 @@ export const SystemStatusModal: FC = () => {
 
   useEffect(() => {
     if (!isOpen) return;
-    if (api.status === "idle") {
-      checkApi().catch(() => undefined);
+    if (api.status !== "ok" && api.status !== "checking") {
+      startApiValidation().catch(() => undefined);
     }
-  }, [api.status, checkApi, isOpen]);
+  }, [api.status, isOpen, startApiValidation]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -59,6 +59,7 @@ export const SystemStatusModal: FC = () => {
   const apiBadge = useMemo(() => {
     if (api.status === "ok") return { text: "OK", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" };
     if (api.status === "checking") return { text: "Checando...", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" };
+    if (api.status === "timeout") return { text: "Timeout", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" };
     if (api.status === "error") return { text: "Erro", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" };
     return { text: "N/A", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" };
   }, [api.status]);
@@ -175,12 +176,34 @@ export const SystemStatusModal: FC = () => {
                 </div>
               </>
             )}
+            {api.status === "timeout" && (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Erro</dt>
+                  <dd className="text-right text-gray-900 dark:text-white break-all">
+                    {api.lastError ?? "Tempo máximo atingido"}
+                  </dd>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Tentativas</dt>
+                  <dd className="text-right text-gray-900 dark:text-white">{api.attempts}</dd>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Duração</dt>
+                  <dd className="text-right text-gray-900 dark:text-white">{api.durationMs}ms</dd>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Última checagem</dt>
+                  <dd className="text-right text-gray-900 dark:text-white">{formatTimestamp(api.checkedAt)}</dd>
+                </div>
+              </>
+            )}
           </dl>
 
           <div className="mt-4 flex items-center justify-end gap-2">
             <Button
               variant="outline"
-              onClick={() => checkApi().catch(() => undefined)}
+              onClick={() => startApiValidation().catch(() => undefined)}
               disabled={api.status === "checking"}
             >
               {api.status === "checking" ? "Checando..." : "Revalidar"}

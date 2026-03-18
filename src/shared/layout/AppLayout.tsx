@@ -6,16 +6,20 @@ import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
 import { useAppStore } from "../store/appStore";
 import { SystemStatusModal } from "../components/system/SystemStatusModal";
+import { ApiValidationBanner } from "../components/system/ApiValidationBanner";
+import { useSystemStatusStore } from "../store/systemStatusStore";
 
 const LayoutContent: React.FC = () => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const loadDemands = useAppStore((state) => state.loadDemands);
   const loadSettings = useAppStore((state) => state.loadSettings);
+  const startApiValidation = useSystemStatusStore((s) => s.startApiValidation);
 
   useEffect(() => {
     loadDemands();
     loadSettings();
-  }, [loadDemands, loadSettings]);
+    startApiValidation().catch(() => undefined);
+  }, [loadDemands, loadSettings, startApiValidation]);
 
   return (
     <div className="min-h-screen xl:flex">
@@ -29,6 +33,7 @@ const LayoutContent: React.FC = () => {
         } ${isMobileOpen ? "ml-0" : ""}`}
       >
         <AppHeader />
+        <ApiValidationBanner />
         <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
           <Outlet />
         </div>

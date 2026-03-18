@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, Outlet, Route, Routes } from "react-router";
 import { useAppStore } from "../../../shared/store/appStore";
@@ -67,7 +67,7 @@ describe("DemandDetails breadcrumb", () => {
     } as any);
   });
 
-  it("exibe breadcrumb com Home > Lista de Demandas > Detalhes da Demanda {protocolo}", async () => {
+  it("exibe breadcrumb com Home > Lista de Demandas > {protocolo}", async () => {
     mockGetDemandById.mockResolvedValue({
       id: "1",
       protocol: "20260101-001",
@@ -96,9 +96,16 @@ describe("DemandDetails breadcrumb", () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "Lista de Demandas" })).toHaveAttribute("href", "/demands/list");
-    expect(screen.getByText("Detalhes da Demanda 20260101-001")).toBeInTheDocument();
+    const nav = (await screen.findAllByRole("navigation")).find((n) =>
+      within(n).queryByRole("link", { name: "Home" }),
+    );
+    expect(nav).toBeTruthy();
+    expect(within(nav as HTMLElement).getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
+    expect(within(nav as HTMLElement).getByRole("link", { name: "Lista de Demandas" })).toHaveAttribute(
+      "href",
+      "/demands/list",
+    );
+    expect(within(nav as HTMLElement).getByText("20260101-001")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("link", { name: "Lista de Demandas" }));
     expect(await screen.findByText("Demand list page")).toBeInTheDocument();
@@ -137,13 +144,20 @@ describe("DemandDetails breadcrumb", () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText("Detalhes da Demanda 20260101-001")).toBeInTheDocument();
+    const nav = (await screen.findAllByRole("navigation")).find((n) =>
+      within(n).queryByRole("link", { name: "Home" }),
+    );
+    expect(nav).toBeTruthy();
+    expect(within(nav as HTMLElement).getByText("20260101-001")).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Ir para outra demanda" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Detalhes da Demanda 20260101-002")).toBeInTheDocument();
+      const updatedNav = (screen.getAllByRole("navigation") as HTMLElement[]).find((n) =>
+        within(n).queryByRole("link", { name: "Home" }),
+      );
+      expect(updatedNav).toBeTruthy();
+      expect(within(updatedNav as HTMLElement).getByText("20260101-002")).toBeInTheDocument();
     });
   });
 });
-
