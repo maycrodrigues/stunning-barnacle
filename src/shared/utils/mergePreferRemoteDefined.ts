@@ -5,4 +5,3 @@ export const mergePreferRemoteDefined = <T extends object>(local: T, remote: Par
   }
   return merged as T;
 };
-

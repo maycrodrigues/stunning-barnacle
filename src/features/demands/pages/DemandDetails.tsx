@@ -271,7 +271,14 @@ export const DemandDetails: React.FC = () => {
         title={`Detalhes da Demanda #${demand.protocol} | Gabinete Online`}
         description="Visualizar detalhes da demanda"
       />
-      <PageBreadcrumb pageTitle="Detalhes da Demanda" />
+      <PageBreadcrumb
+        pageTitle="Detalhes da Demanda"
+        items={[
+          { label: "Home", to: "/" },
+          { label: "Lista de Demandas", to: "/demands/list" },
+          { label: `${demand.protocol}` },
+        ]}
+      />
 
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
