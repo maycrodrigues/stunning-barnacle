@@ -11,7 +11,7 @@ export const contactSchema = z.object({
   neighborhood: z.string().optional(),
   notes: z.string().optional(),
   isVoter: z.boolean().optional(),
-  politicalSpectrum: z.enum(["Left", "Right", "Center"]).optional(),
+  politicalSpectrum: z.string().optional().or(z.literal("")),
 });
 
 export type ContactFormData = z.infer<typeof contactSchema>;

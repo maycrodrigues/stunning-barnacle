@@ -151,6 +151,12 @@ export const syncService = {
           } else {
              console.warn(`[Sync] Contact ${contact.id} changed during sync. Skipping synced flag update.`);
           }
+        } else {
+          const body = await response.text().catch(() => "");
+          console.error(
+            `[Sync] Failed to sync contact ${contact.id}: HTTP ${response.status} ${response.statusText}`.trim(),
+            body ? { body } : undefined
+          );
         }
       } catch (error) {
         console.error(`[Sync] Error syncing contact ${contact.id}:`, error);

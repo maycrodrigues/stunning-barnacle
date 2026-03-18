@@ -8,6 +8,7 @@ import Checkbox from "../../../shared/components/form/input/Checkbox";
 import Select from "../../../shared/components/form/Select";
 import Label from "../../../shared/components/form/Label";
 import Button from "../../../shared/components/ui/button/Button";
+import Alert from "../../../shared/components/ui/alert/Alert";
 import { ContactFormData, contactSchema } from "../types";
 import { Contact } from "../../../shared/services/db";
 import { maskPhone } from "../../../shared/utils/masks";
@@ -67,11 +68,14 @@ export const ContactForm: React.FC<ContactFormProps> = ({
     },
   });
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const normalizePoliticalSpectrum = (
-    value: string | undefined
+    value: unknown
   ): ContactFormData["politicalSpectrum"] => {
-    if (value === "Left" || value === "Right" || value === "Center") return value;
-    return undefined;
+    if (typeof value !== "string") return undefined;
+    const trimmed = value.trim();
+    return trimmed ? trimmed : undefined;
   };
 
   const showMap = !initialData;
@@ -158,6 +162,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setSubmitError(null);
       if (!initialData) {
         setMarkerPosition(null);
         setMapCenter(defaultCenter);
@@ -253,12 +258,16 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   }, [addressValue, isOpen, showMap]);
 
   const onFormSubmit = async (data: ContactFormData) => {
+    setSubmitError(null);
     try {
       await onSubmit(data);
       onClose();
       reset();
     } catch (error) {
       console.error("Error submitting contact form:", error);
+      const message =
+        error instanceof Error ? error.message : typeof error === "string" ? error : "Falha ao salvar o contato.";
+      setSubmitError(message);
     }
   };
 
@@ -274,6 +283,13 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       </div>
 
       <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
+        {submitError && (
+          <Alert
+            variant="error"
+            title="Erro ao salvar"
+            message={submitError}
+          />
+        )}
         <div>
           <Label htmlFor="name">Nome Completo *</Label>
           <Controller

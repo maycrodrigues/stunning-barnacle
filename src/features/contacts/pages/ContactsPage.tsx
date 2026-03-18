@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { useLocation } from "react-router";
+import Swal from "sweetalert2";
 import { useContactsStore } from "../store/contactsStore";
 import { ContactList } from "../components/ContactList";
 import { ContactForm } from "../components/ContactForm";
@@ -43,16 +44,30 @@ export const ContactsPage: React.FC = () => {
   const handleSubmit = async (data: ContactFormData) => {
     setIsSaving(true);
     try {
+      console.info("[Contacts] Saving contact", { mode: editingContact ? "update" : "create" });
       if (editingContact) {
         await updateContact(editingContact.id, data);
       } else {
         await addContact(data);
       }
       setEditingContact(undefined);
-      setIsFormOpen(false);
+      await Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: "Contato salvo com sucesso",
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true,
+      });
     } catch (error) {
       console.error("Error saving contact:", error);
-      alert("Ocorreu um erro ao salvar o contato.");
+      await Swal.fire({
+        icon: "error",
+        title: "Erro",
+        text: "Ocorreu um erro ao salvar o contato.",
+      });
+      throw error instanceof Error ? error : new Error("Ocorreu um erro ao salvar o contato.");
     } finally {
       setIsSaving(false);
     }

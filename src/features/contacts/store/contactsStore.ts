@@ -28,6 +28,7 @@ export const useContactsStore = create<ContactsStore>((set) => ({
   loadContacts: async () => {
     set({ isLoading: true, error: null });
     try {
+      console.info("[Contacts] Loading contacts");
       const contacts = await getAllContacts();
       set({ contacts, isLoading: false });
     } catch (error) {
@@ -39,6 +40,7 @@ export const useContactsStore = create<ContactsStore>((set) => ({
   addContact: async (data: ContactFormData) => {
     set({ isLoading: true, error: null });
     try {
+      console.info("[Contacts] Adding contact");
       const newContact = await saveContactInDb(data);
       
       set((state) => ({ 
@@ -61,6 +63,7 @@ export const useContactsStore = create<ContactsStore>((set) => ({
   updateContact: async (id: string, data: Partial<ContactFormData>) => {
     set({ isLoading: true, error: null });
     try {
+      console.info("[Contacts] Updating contact", { id });
       const updated = await updateContactInDb(id, data);
       
       set((state) => ({
@@ -81,6 +84,7 @@ export const useContactsStore = create<ContactsStore>((set) => ({
   deleteContact: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
+      console.info("[Contacts] Deleting contact", { id });
       await deleteContactInDb(id);
       set((state) => ({
         contacts: state.contacts.filter((c) => c.id !== id),
