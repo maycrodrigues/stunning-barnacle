@@ -1,6 +1,8 @@
 import { openDB, DBSchema, IDBPDatabase } from "idb";
 import { ulid } from "ulid";
 import { DemandFormData } from "../../features/demands/types";
+import { z } from "zod";
+import { mergePreferRemoteDefined } from "../utils/mergePreferRemoteDefined";
 
 const apiUrlFromEnv = (import.meta.env.VITE_API_URL ?? "").trim();
 const API_URL = apiUrlFromEnv
@@ -107,10 +109,25 @@ interface GabineteDB extends DBSchema {
   };
 }
 
-const DB_NAME = "gabinete-online-db";
+const DB_NAME = import.meta.env.MODE === "test" ? "gabinete-online-db-test" : "gabinete-online-db";
 const DB_VERSION = 7; // Incremented version for schema update
 
 let dbPromise: Promise<IDBPDatabase<GabineteDB>> | null = null;
+
+export const resetDbForTests = async () => {
+  if (import.meta.env.MODE !== "test") return;
+  if (dbPromise) {
+    const db = await dbPromise;
+    db.close();
+  }
+  dbPromise = null;
+  await new Promise<void>((resolve) => {
+    const request = indexedDB.deleteDatabase(DB_NAME);
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+    request.onblocked = () => resolve();
+  });
+};
 
 export interface Member {
   id: string;
@@ -433,9 +450,63 @@ export const deleteAllDemands = async () => {
 // Settings operations
 const SETTINGS_ID = "global_settings";
 
+const optionSchema = z.object({
+  value: z.string().min(1),
+  label: z.string().min(1),
+  badge: z
+    .object({
+      text: z.string().optional(),
+      color: z.enum(["primary", "success", "error", "warning", "info", "light", "dark"]).optional(),
+    })
+    .optional(),
+});
+
+const tratativaSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  type: z.enum(["text", "number", "long_text"]),
+  slug: z.string().min(1),
+});
+
+const settingsPayloadSchema = z.object({
+  categories: z.array(optionSchema),
+  urgencies: z.array(optionSchema),
+  status: z.array(optionSchema),
+  tratativas: z.array(tratativaSchema),
+  roles: z.array(optionSchema),
+  politicalSpectrums: z.array(optionSchema),
+});
+
+export const assertValidSettingsPayload = (payload: {
+  categories: Option[];
+  urgencies: Option[];
+  status: Option[];
+  tratativas: Tratativa[];
+  roles: Option[];
+  politicalSpectrums: Option[];
+}) => {
+  const parsed = settingsPayloadSchema.safeParse(payload);
+  if (parsed.success) return;
+  const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(" | ");
+  throw new Error(`Configurações inválidas: ${issues}`);
+};
+
 export const saveSettings = async (categories: Option[], urgencies: Option[], status: Option[], tratativas: Tratativa[] = [], roles: Option[] = [], politicalSpectrums: Option[] = [], tenantId: string = 'default-tenant') => {
   const db = await getDB();
+  assertValidSettingsPayload({
+    categories,
+    urgencies,
+    status,
+    tratativas,
+    roles,
+    politicalSpectrums,
+  });
   await db.put("settings", { id: SETTINGS_ID, tenantId, categories, urgencies, status, tratativas, roles, politicalSpectrums, updatedAt: new Date(), synced: 0 });
+  const saved = await db.get("settings", SETTINGS_ID);
+  if (!saved) throw new Error("Falha ao persistir configurações no IndexedDB.");
+  if (!Array.isArray(saved.roles) || !Array.isArray(saved.tratativas)) {
+    throw new Error("Configurações persistidas em formato inválido no IndexedDB.");
+  }
 };
 
 export const getSettings = async () => {
@@ -454,7 +525,7 @@ export const getSettings = async () => {
 
         const revivedSettings = {
              ...serverSettings,
-             updatedAt: serverSettings.updatedAt ? new Date(serverSettings.updatedAt) : new Date(),
+             updatedAt: serverSettings.updatedAt ? new Date(serverSettings.updatedAt) : undefined,
              synced: 1
         };
 
@@ -462,7 +533,35 @@ export const getSettings = async () => {
         
         // Only update if local doesn't exist or is already synced (no local changes)
         if (!localSettings || localSettings.synced === 1) {
-             await store.put(revivedSettings);
+             const payloadToValidate = {
+               categories: revivedSettings.categories ?? [],
+               urgencies: revivedSettings.urgencies ?? [],
+               status: revivedSettings.status ?? [],
+               tratativas: revivedSettings.tratativas ?? [],
+               roles: revivedSettings.roles ?? [],
+               politicalSpectrums: revivedSettings.politicalSpectrums ?? [],
+             };
+             const validation = settingsPayloadSchema.safeParse(payloadToValidate);
+             if (validation.success) {
+              const localUpdatedAt = localSettings?.updatedAt ? new Date(localSettings.updatedAt).getTime() : undefined;
+              const remoteUpdatedAt = revivedSettings.updatedAt ? new Date(revivedSettings.updatedAt).getTime() : undefined;
+              const shouldApplyRemote = !localSettings || (remoteUpdatedAt !== undefined && (localUpdatedAt === undefined || remoteUpdatedAt >= localUpdatedAt));
+              if (shouldApplyRemote) {
+                const next = localSettings
+                  ? mergePreferRemoteDefined(localSettings, revivedSettings)
+                  : revivedSettings;
+                await store.put(next);
+              } else {
+                console.warn("Settings from API ignored due to missing/older updatedAt; keeping local.", {
+                  localUpdatedAt,
+                  remoteUpdatedAt,
+                });
+              }
+             } else {
+               console.warn("Settings from API failed validation; keeping local settings.", {
+                 issues: validation.error.issues.map((i) => ({ path: i.path, message: i.message })),
+               });
+             }
         }
         await tx.done;
       }

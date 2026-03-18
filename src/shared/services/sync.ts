@@ -1,4 +1,5 @@
 import { getDB } from './db';
+import { mergePreferRemoteDefined } from '../utils/mergePreferRemoteDefined';
 
 const apiUrlFromEnv = (import.meta.env.VITE_API_URL ?? '').trim();
 const API_URL = apiUrlFromEnv
@@ -8,14 +9,6 @@ const API_URL = apiUrlFromEnv
     : new URL('api/v1', new URL(import.meta.env.BASE_URL || '/', window.location.origin)).toString().replace(/\/$/, '');
 
 const reviveDate = (value: unknown): Date => new Date(value as string | number | Date);
-
-const mergePreferRemoteDefined = <T extends object>(local: T, remote: Partial<T>): T => {
-  const merged: Record<string, unknown> = { ...(local as Record<string, unknown>) };
-  for (const [key, value] of Object.entries(remote as Record<string, unknown>)) {
-    if (value !== undefined) merged[key] = value;
-  }
-  return merged as T;
-};
 
 export const syncService = {
   async syncDemands() {
@@ -210,6 +203,12 @@ export const syncService = {
      
      for (const setting of unsyncedSettings) {
        try {
+         console.info("[Sync][Settings] Pushing settings to server", {
+           id: setting.id,
+           updatedAt: setting.updatedAt,
+           hasRoles: Array.isArray((setting as any).roles),
+           hasTratativas: Array.isArray((setting as any).tratativas),
+         });
          const response = await fetch(`${API_URL}/settings`, {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
@@ -217,22 +216,71 @@ export const syncService = {
          });
          
          if (response.ok) {
-           const tx = db.transaction('settings', 'readwrite');
-           const store = tx.objectStore('settings');
-           const current = await store.get(setting.id);
-           
-           if (current) {
-             const currentUpdated = current.updatedAt ? new Date(current.updatedAt).getTime() : 0;
-             const capturedUpdated = setting.updatedAt ? new Date(setting.updatedAt).getTime() : 0;
+           const capturedUpdated = setting.updatedAt ? new Date(setting.updatedAt).getTime() : undefined;
+           const expectedRolesCount = Array.isArray((setting as any).roles) ? (setting as any).roles.length : 0;
+           const expectedTratativasCount = Array.isArray((setting as any).tratativas) ? (setting as any).tratativas.length : 0;
 
-             if (currentUpdated === capturedUpdated) {
-                await store.put({ ...current, synced: 1 });
-                console.log(`[Sync] Settings ${setting.id} marked as synced.`);
+           let serverAccepted = false;
+           try {
+             const verifyResponse = await fetch(`${API_URL}/settings`);
+             if (verifyResponse.ok) {
+               const settingsArray = await verifyResponse.json();
+               const serverSetting = Array.isArray(settingsArray)
+                 ? settingsArray.find((s: any) => s?.id === setting.id)
+                 : undefined;
+
+               const serverUpdatedAt = serverSetting?.updatedAt ? new Date(serverSetting.updatedAt).getTime() : undefined;
+               const serverRolesCount = Array.isArray(serverSetting?.roles) ? serverSetting.roles.length : undefined;
+               const serverTratativasCount = Array.isArray(serverSetting?.tratativas) ? serverSetting.tratativas.length : undefined;
+
+               serverAccepted =
+                 serverUpdatedAt !== undefined &&
+                 (capturedUpdated === undefined || serverUpdatedAt >= capturedUpdated) &&
+                 serverRolesCount !== undefined &&
+                 serverTratativasCount !== undefined &&
+                 serverRolesCount === expectedRolesCount &&
+                 serverTratativasCount === expectedTratativasCount;
+
+               if (!serverAccepted) {
+                 console.warn("[Sync][Settings] Server verification failed; keeping local as unsynced.", {
+                   id: setting.id,
+                   capturedUpdated,
+                   serverUpdatedAt,
+                   expectedRolesCount,
+                   expectedTratativasCount,
+                   serverRolesCount,
+                   serverTratativasCount,
+                 });
+               }
              } else {
-                console.warn(`[Sync] Settings ${setting.id} changed during sync. Skipping synced flag update.`);
+               console.warn("[Sync][Settings] Verification GET /settings failed; keeping local as unsynced.", {
+                 status: verifyResponse.status,
+                 statusText: verifyResponse.statusText,
+               });
              }
+           } catch (error) {
+             console.warn("[Sync][Settings] Verification request errored; keeping local as unsynced.", error);
            }
-           await tx.done;
+
+           if (serverAccepted) {
+             const tx = db.transaction('settings', 'readwrite');
+             const store = tx.objectStore('settings');
+             const current = await store.get(setting.id);
+             const currentUpdated = current?.updatedAt ? new Date(current.updatedAt).getTime() : undefined;
+             if (current && (capturedUpdated === undefined || currentUpdated === capturedUpdated)) {
+               await store.put({ ...current, synced: 1 });
+               console.log(`[Sync] Settings ${setting.id} marked as synced.`);
+             } else {
+               console.warn(`[Sync] Settings ${setting.id} changed during sync. Skipping synced flag update.`);
+             }
+             await tx.done;
+           }
+         } else {
+           const body = await response.text().catch(() => "");
+           console.error(
+             `[Sync][Settings] Failed to push settings: HTTP ${response.status} ${response.statusText}`.trim(),
+             body ? { body } : undefined
+           );
          }
        } catch (error) {
          console.error(`[Sync] Error syncing settings:`, error);
@@ -248,6 +296,11 @@ export const syncService = {
          const store = tx.objectStore('settings');
 
          for (const serverSetting of serverSettings) {
+           console.info("[Sync][Settings] Pulling settings from server", {
+             id: serverSetting?.id,
+             hasRoles: Array.isArray((serverSetting as any)?.roles),
+             hasTratativas: Array.isArray((serverSetting as any)?.tratativas),
+           });
            const revivedSetting = {
              ...serverSetting,
              createdAt: serverSetting.createdAt ? new Date(serverSetting.createdAt) : undefined,
@@ -260,7 +313,18 @@ export const syncService = {
            if (!localSetting) {
              await store.put(revivedSetting);
            } else if (localSetting.synced === 1) {
-             await store.put(revivedSetting);
+             const localUpdatedAt = localSetting.updatedAt ? new Date(localSetting.updatedAt).getTime() : undefined;
+             const remoteUpdatedAt = revivedSetting.updatedAt ? new Date(revivedSetting.updatedAt).getTime() : undefined;
+             if (remoteUpdatedAt !== undefined && (localUpdatedAt === undefined || remoteUpdatedAt >= localUpdatedAt)) {
+               const merged = mergePreferRemoteDefined(localSetting, revivedSetting);
+               await store.put(merged);
+             } else {
+               console.warn("[Sync][Settings] Ignoring remote settings due to missing/older updatedAt.", {
+                 id: serverSetting?.id,
+                 localUpdatedAt,
+                 remoteUpdatedAt,
+               });
+             }
            } else {
              console.warn(`[Sync] Skipping update for settings ${serverSetting.id} due to local unsynced changes.`);
            }
